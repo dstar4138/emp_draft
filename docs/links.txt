@@ -1,0 +1,9 @@
+SNTG-D
+# http://www.ibm.com/developerworks/aix/library/au-cli_plugins/
+# http://code.activestate.com/recipes/278731-creating-a-daemon-the-python-way/
+# http://www.jejik.com/articles/2007/02/a_simple_unix_linux_daemon_in_python/
+# http://pypi.python.org/pypi/zope.interface
+
+
+using 
+modified Yapsy 1.7 or 1.8

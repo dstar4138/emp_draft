@@ -1,0 +1,37 @@
+#
+# Java Interface for SMTG
+# by Alexander Dean
+#
+In here are some examples of other languages interfacing with SMTG, using the 
+InterfaceAPI. To get an example for plugins, please see the PluginAPI portion.
+
+
+These are written in java: 
+jsmtg.java     is a GUI example that can be used to test you daemon 
+               communications. It presents the communication like a chat window
+               to make it easyer to see.
+
+
+jsmtg_t.java   is a simpler example without a GUI and can be used to visualize 
+               the steps it takes to get the interface connected and
+               communicating with SMTG. 
+ 
+         
+#               
+# Small FAQ:
+#
+How to compile?
+Run the command when in the directory:
+   javac jsmtg.java
+
+How to run?
+Just run it like a normal Java program:
+   java jsmtg
+
+Where can I go if i have more questions?
+As always, you can contact me through my website. 
+   blog.dstar4138.com/contact
+
+
+
+
