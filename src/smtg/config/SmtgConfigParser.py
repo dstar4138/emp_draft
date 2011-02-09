@@ -63,12 +63,6 @@ class SmtgConfigParser(SafeConfigParser):
         if self.getfloat("Daemon","update-speed") < 1.0:
             self.set("Daemon","update-speed", 1.0)
 
-        #now we can check that emails and sms work if needed
-        if self.getboolean("Alerts","alertby-email") or \
-           self.getboolean("Alerts","alertby-sms"):
-            #LATER: check email addresses and ssl logins
-            pass 
-
         #create the feed file if required.
         if self.getboolean("Alerts","alertby-feed"):
             self.__try_setup_path(self.get("Alerts","feed-file"))
