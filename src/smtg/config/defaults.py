@@ -161,6 +161,7 @@ if CUR_PLATFORM.find("linux")!=-1:    #linux systems.
 
     default_plugin_dirs.append("/etc/smtg/plugins")
     default_plugin_dirs.append("~/.smtg/plugins")
+    default_plugin_dirs.append("plugins") # look in the local src/plugins directory too
 
 
 elif CUR_PLATFORM.find("win32")!=-1:  # Windows systems.
