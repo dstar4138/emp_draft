@@ -38,6 +38,7 @@ all of your interfaces letting them know of the event. Instant security system!
 
 Here are a couple more examples of plug-ins that are or will be made in the 
 (hopefully near) future:
+
 * RSS Rake: This is your simple plug-in to facilitate scraping your favorite news/blog feeds.
 * Log Watch: Watches local files, like a log file, and keeps track of changes. Useful for system administration or debugging programs that are running.
 * Email: Watch email accounts for new messages!
