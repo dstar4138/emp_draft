@@ -71,7 +71,53 @@ default_configs = {
       "alertby-sound" : "false",  # alert via a sound file
       "alertby-sms"   : "false",  # send a txt message to a phone
       "alertby-exec"  : "false",  # execute a command line program
-      "alertby-feed"  : "false"   # save alert to an XML file for external use
+      "alertby-feed"  : "false",  # save alert to an XML file for external use
+
+    # email server for SMTP protocol, This is so alerts can be sent to an email
+    # address or your choosing, SMTG supports using SSL also!!
+      "email-host" : "",
+      "email-port" : "",
+      "email-to"   : "",
+      "email-subject" : "",
+    # if you dont have a personal email server, try using gmail: 
+    #       http://mail.google.com/support/bin/answer.py?answer=13287
+      "email-ssl" : "false",
+      "email-ssl-username" :"",
+      "email-ssl-password" :"",
+
+    # sound alerts will play this sound via the sound program given
+    # make sure to use the tag %s for where the file will go, otherwise it
+    # will go at the end of the command.
+      "sound-alert":"",
+      "sound-warn":"",
+      "sound-update":"",
+      "sound-player":"",
+    ### if you like messing with festival or espeak.
+    #alert_sound_str = Alert Alert Fire!
+    #warning_sound_str = Hey. There may be something you need to look at.
+    #update_sound_str = Updating now.
+    #sound_player = festival -len "%s"
+    ###
+
+
+    # txting you? i need ur num dude and ur areacode... oh and ur carrier...
+    # or if you know ur phones email right from the start so i dont have 
+    # to guess. To txt yourself, you NEED to have access to an email server.
+      "phone-num":"",
+      "phone-carrier":"",
+      "phone-email":"",
+
+    # execute this program as an alert, thus a custom alert. Information about
+    # the alert will be sent to this program through standard out... you can
+    # turn that off if you want. 
+      "custom-exec":"",
+      "custom-exec-stdout":"false",
+
+    # the location of the xml file to save to and its name.
+    # remember that the xml file can either be overwritten or
+    # appended to. Default = overwrite
+      "feed-append": "false",
+      "feed-file":""
     },
 
 #Logging section-

@@ -14,12 +14,12 @@ Longer Description:
 
 SMTG has three parts: the daemon, the plug-ins, and the interfaces. The 
 daemon sits and runs the feed loop along with facilitating communication 
-between the interfaces and the plug-ins. Interfaces are what you look at when 
+between the interfaces and the plug-ins. Interfaces are what you look at when
 you are running the program, a bunch of interfaces can be connected to the 
 daemon at once.
  
 For example, you could be running the daemon on a server and have a 
-web-portal interface, and then code yourself up a pretty little GUI to run on 
+web-portal interface, and then code yourself up a pretty little GUI to run on
 your desktop and another on your new smart-phone. These interfaces all get 
 alerts, updates, and messages from the daemon simultaneously (more or less).
 
@@ -34,7 +34,7 @@ AlertPlugins. These are instantaneous triggers that can do whatever you need
 them to do. For example, say you make a simple bluetooth arduino trigger on 
 your dorm door that sends a message back to your computer when someone enters 
 your room. You can have an SMTG AlertPlugin be triggered and send a message to 
-all of your interfaces letting them know of the event. Instant security system!
+all of your interfaces letting them know of the event. Instant security system!  
 
 Here are a couple more examples of plug-ins that are or will be made in the 
 (hopefully near) future:
