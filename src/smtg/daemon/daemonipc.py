@@ -78,7 +78,7 @@ class DaemonServerSocket():
         about network buffers or the accidental buffer-overflow.
         """
         try:
-            self.socket.sendall(msg.encode(self.ENCODING))
+            self.socket.sendall(str(msg).encode(self.ENCODING))
             
         except AttributeError:
             raise TypeError("Parameter given is not a string.")

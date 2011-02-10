@@ -12,21 +12,3 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and 
 limitations under the License. 
 """
-
-
-# Alerts are of one of the following types only:
-ALERT_TYPE = ["email","sound","exec"]
-
-
-
-class Alert(object):
-    """The base type of alert that can be passed or created in SMTG """
-    
-    def __init__(self,type):
-        """Create the alert of a given type, see ALERT_TYPE 
-        for more information. 
-        """
-        self.type = type
-        
-        
-#TODO: fix alerts. This needs to be more thought out.

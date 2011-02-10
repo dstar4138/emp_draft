@@ -84,7 +84,7 @@ class FeedPlugin(SmtgPlugin):
         if importance <= HIGH_IMPORTANCE or importance >= LOW_IMPORTANCE:  
             self.update_importance = importance
        
-    def _update(self, args=[]):
+    def update(self, args=[]):
         """This is the method that gets run every pull loop. Any updating
         processes that need to get done, need to get run in this method.
         """

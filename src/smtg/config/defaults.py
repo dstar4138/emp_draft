@@ -17,11 +17,12 @@ limitations under the License.
 #These are the default configurations that are loaded based on the type
 #of operating system, and system setup.
 ######
-
+import logging
 import sys
 
 # the platform you are running on!
 CUR_PLATFORM = sys.platform
+
 
 #
 # This is included as the default configuration for the config parser.
@@ -56,17 +57,10 @@ default_configs = {
       "req-plugin-reg": "true", 
       
     #registration file location.
-      "reg-file":""
-    },
+      "reg-file":"",
 
-#Alert section-
-# The types of alerts avaliable to the user, and the config and settups 
-# involved for each. Doesn't mean there is GOING to be an alert, just
-# the settups for each.
-"Alerts" :
-    {
-    # make sure to turn on certain alerts. This adds for a bit more security
-    # if the daemon is already running with the current config. 
+    # make sure to turn on certain alert types. This adds for a bit more 
+    # security if the daemon is already running with the current cfg. 
       "alertby-email" : "false",  # email a given email address
       "alertby-sound" : "false",  # alert via a sound file
       "alertby-sms"   : "false",  # send a txt message to a phone
@@ -89,6 +83,7 @@ default_configs = {
 
     # Logging file need to be set as well
      "log-file":""
+
     }
 }
 
@@ -103,9 +98,6 @@ default_plugin_dirs = []
 if CUR_PLATFORM.find("linux")!=-1:    #linux systems.
     default_configs["Daemon"]["pid-file"]="/var/tmp/smtg.pid"
     default_configs["Daemon"]["reg-file"]="~/.smtg/registration"
-
-    default_configs["Alerts"]["sound-player"]="mplayer %s"
-    default_configs["Alerts"]["feed-file"]="~/.smtg/alert.xml"
 
     default_configs["Logging"]["log-file"]="smtg.log"
 
@@ -123,7 +115,7 @@ elif CUR_PLATFORM.find("win32")!=-1:  # Windows systems.
 elif CUR_PLATFORM.find("darwin")!=-1: # Mac OSX
     pass
 else:  # the poor souls not using one of the above. :(
-    pass
+    logging.warning("Could not determine current operating system.")
 
 
 

@@ -35,6 +35,7 @@ from threading import Thread
 
 from smtg.plugin.SmtgPluginManager import SmtgPluginManager
 from smtg.daemon.security.register import isInterfaceRegistered
+from smtg.config.defaults import default_plugin_dirs
 from smtg.config.logger import setup_logging
 from smtg.config.SmtgConfigParser import SmtgConfigParser
 from smtg.daemon.daemon import Daemon
@@ -61,13 +62,13 @@ class SmtgDaemon(Daemon):
     want to know how to register your interface with the local smtg daemon.
     """
     def __init__(self, configfile=None, dprg="smtgd.py"):
-        #generate a randomized killswitch only the process knows
+        # generate a randomized killswitch only the process knows
         self.KILLSWITCH = str(random.random())[2:12]
 
-        #the killswitch is the local communication identifier
+        # the kill-switch is the local communication identifier
         self.COM_ID = 'd'+self.KILLSWITCH 
 
-        #get urself a counter!
+        # get yourself a counter!
         self.start_time=time.time() 
 
         # now set up the internal configuration via a config file.
@@ -89,13 +90,13 @@ class SmtgDaemon(Daemon):
          
     def stop(self):
         """Stops the local Smtg daemon by killing both threads."""
-        #kill thread 2 with a quick blast from a socket
+        # kill thread 2 with a quick blast from a socket
         daemon=DaemonClientSocket(self.getComPort())
         daemon.connect(self.COM_ID)
         daemon.send("killmenow-"+self.KILLSWITCH)
         daemon.close()
         
-        #then kill the normal one.
+        # then kill the normal one.
         Daemon.stop(self)
 
     def restart(self):
@@ -105,8 +106,8 @@ class SmtgDaemon(Daemon):
         try: 
             self.stop()
             # then thread 1 will die in sleep_time or less seconds when it
-            # sees that the pid file is gone. This is to insure the daemons
-            # distruction.
+            # sees that the PID file is gone. This is to insure the daemons
+            # destruction..
             time.sleep(10)
         except: pass
         self.start()
@@ -134,15 +135,30 @@ class SmtgDaemon(Daemon):
         # -thread 2, a server to listen to incoming connections 
         #    from interfaces
         try:
-            #start the interface thread
-            Thread(target=self.__t2).start()
+            # load the plug-in manager now and search for the plug-ins.
+            self.pman = SmtgPluginManager(default_plugin_dirs)
+            self.pman.collectPlugins()
             
-            logging.debug("pull-thread started")
-            self.pman = SmtgPluginManager()#FIXME: add plugin dirs
+            # activate all the plug-ins that need activating
+            self.pman.activatePlugins()
     
+            # start the interface thread
+            Thread(target=self.__t2).start()
+    
+            # start the pull loop.
+            logging.debug("pull-thread started")
             while self.isRunning():
-                #TODO: use manager to pull from feed plugins
-                try:
+                
+                # get all active feed plug-ins
+                activeFeeds = self.pman.getFeedPlugins()
+                for feed in activeFeeds:
+                    # for each feed run the update function with no
+                    # arguments. The only time arguments are needed 
+                    # is if the plug-in was force updated by a command.
+                    logging.debug("pulling feed %s" % feed.name)
+                    feed.plugin_object.update()
+                
+                try:# sleep, and every five seconds check if still alive
                     count=0
                     while(count<self.sleep_time):
                         count+=5
@@ -152,11 +168,11 @@ class SmtgDaemon(Daemon):
             logging.debug("pull-thread is dead")
 
         except Exception as e:
-            logging.error("Run-tread:",e)
+            logging.error("Run-tread: %s" % str(e))
             raise e
             
     
-    def __t2(self):#interface server, see _run()
+    def __t2(self):# interface server, see _run()
         logging.debug("communication-thread started")
         # Create socket and bind to address
         TCPSock = DaemonServerSocket(portNum=self.port)
@@ -168,6 +184,7 @@ class SmtgDaemon(Daemon):
             identifier = client_socket.recv()
             abilities = self._registered(identifier)
             if not abilities:
+                client_socket.send( CLOSING_CONNECTION )
                 client_socket.close()
             
             # since there are abilities that this person can perform
@@ -211,7 +228,7 @@ class SmtgDaemon(Daemon):
                 logging.error("Interface("+str(identifier)+")-"+str(e))
             action = interface.recv();
         
-        #asked to break, thus close interface
+        # asked to break, thus close interface
         interface.close()
         logging.debug("Interface("+str(identifier)+")-thread closed")
 

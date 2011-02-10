@@ -1,7 +1,3 @@
-#!/usr/bin/python
-# -*- coding: utf-8; tab-width: 4; indent-tabs-mode: t -*-
-
-
 """
 Role
 ====
@@ -72,8 +68,8 @@ class PluginManagerDecorator(object):
 		``decorated_object``.
 		"""
 		
-		if decorated_object is None: ## hahaha disregard that i sux cocks
-			#logging.debug("Creating a default PluginManager instance to be decorated.")
+		if decorated_object is None:
+			logging.debug("Creating a default PluginManager instance to be decorated.")
 			from yapsy.PluginManager import PluginManager
 			decorated_object = PluginManager(categories_filter, 
 											 directories_list,

@@ -16,13 +16,14 @@ limitations under the License.
 from smtg.plugin.smtgplugin import FeedPlugin, AlertPlugin
 from yapsy.PluginManagerDecorator import PluginManagerDecorator
 
-#
-# loads the plug-ins and is able to provide the daemon/server with up-to-date
-# alert feed-back on any plug-in loaded.
-#
 
+# this is the default plugin descriptor extention. See yapsy.PluginInfo
+PLUGIN_EXT = "smtg-plugin"
+
+# this is the default plugin categories
 PLUGIN_CATEGORIES = {"Feeds": FeedPlugin,
                      "Alerts": AlertPlugin}
+
 
 class SmtgPluginManager(PluginManagerDecorator):
     """The plugin manager for the SMTG daemon.
@@ -33,12 +34,18 @@ class SmtgPluginManager(PluginManagerDecorator):
         PluginManagerDecorator.__init__(self, 
                                         categories_filter=PLUGIN_CATEGORIES,
                                         directories_list=plugin_dirs,
-                                        plugin_info_ext="smtg-plugin")
+                                        plugin_info_ext=PLUGIN_EXT)
         
-        
-    def pullFeeds(self):
-        """ Run all the feed plugin's pull loops. """
+    def activatePlugins(self):
+        """Activates all the valid FeedPlugins, and any AlertPlugins that 
+        require an auto-start.
+        """
+        #TODO: implement SmtgPluginManager.activatePlugins()
         pass
+        
+    def getFeedPlugins(self):
+        """ Run all the feed plugin's pull loops. """
+        return self.getPluginsOfCategory("Feeds")
     
     
     def runCommand(self,plugin_name,cmd):

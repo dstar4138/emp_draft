@@ -39,14 +39,12 @@ class SmtgConfigParser(SafeConfigParser):
         ## now set up the parent class using defaults ##
         SafeConfigParser.__init__(self)
         #reset internal configparser variable...
-        # i know thats bad form, but this is what
-        # happens if you don't give me access to
-        # internal variables... muahahahaha!!!
+        # i know thats bad form, but this is what happens:
         self._sections=default_configs 
 
 
     def validateInternals(self):
-        """ Check all the values you are overwritting from the config 
+        """ Check all the values you are overwriting from the config 
         file. 
         """
         if self.VALIDATED: return
