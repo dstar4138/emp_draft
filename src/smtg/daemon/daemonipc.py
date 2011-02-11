@@ -24,7 +24,7 @@ limitations under the License.
 __version__ = "0.3"
 
 
-from socket import socket, AF_INET, SOCK_STREAM
+from socket import socket, AF_INET, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR
 
 
 class DaemonSocketError(Exception):
@@ -64,11 +64,12 @@ class DaemonServerSocket():
         self.LOCAL_ONLY = externalBlock
         if altsocket == None:
             self.socket = socket(AF_INET,SOCK_STREAM)
+            self.socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
             self.socket.bind(("localhost",self.PORT_NUM))
             self.socket.listen(3) # standard, change if you want.
             # we want the server socket to 
             # never timeout and kill itself.
-            self.socket.setblocking(True) 
+            self.socket.setblocking(True)
         else: 
             self.socket = altsocket
     
@@ -79,7 +80,6 @@ class DaemonServerSocket():
         """
         try:
             self.socket.sendall(str(msg).encode(self.ENCODING))
-            
         except AttributeError:
             raise TypeError("Parameter given is not a string.")
         except:
@@ -98,8 +98,7 @@ class DaemonServerSocket():
             msg = self.socket.recv(self.BUFFER_SIZE)
         except:pass
         finally:
-            msg = msg.decode(self.ENCODING)
-        return msg
+            return msg.decode(self.ENCODING)
     
     def rebind(self, newPortNum):
         """Rebinds the DaemonServerSocket to a new port number. """
@@ -111,6 +110,7 @@ class DaemonServerSocket():
         If a connection is closed, there is not getting it back.
         """
         self.socket.close()
+
    
     def accept(self):
         """Returns a new connected DaemonServerSocket for communication with a 
@@ -162,6 +162,7 @@ class DaemonClientSocket():
         other end. This essentially acts as a socket.sendall(msg), but if the 
         message is larger than the buffer-size it will throw an error. 
         """
+        msg = str(msg)
         if len(msg) > self.BUFFER_SIZE:
             raise DaemonSocketError("Message given is larger than buffer size!")
         
@@ -191,9 +192,7 @@ class DaemonClientSocket():
                 count+=1
         except: pass        
         finally:
-            msg = msg.decode(self.ENCODING)
-            
-        return msg
+            return msg.decode(self.ENCODING)
     
     def close(self):
         """Closes the current connection with the Daemon."""

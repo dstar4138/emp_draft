@@ -62,8 +62,8 @@ class SmtgConfigParser(SafeConfigParser):
             self.set("Daemon","update-speed", 1.0)
 
         #create the feed file if required.
-        if self.getboolean("Alerts","alertby-feed"):
-            self.__try_setup_path(self.get("Alerts","feed-file"))
+        #if self.getboolean("Alerts","alertby-feed"):
+        #    self.__try_setup_path(self.get("Alerts","feed-file"))
 
 
     def __try_setup_path(self,path):

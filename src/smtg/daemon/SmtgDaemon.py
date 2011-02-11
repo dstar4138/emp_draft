@@ -40,7 +40,8 @@ from smtg.config.logger import setup_logging
 from smtg.config.SmtgConfigParser import SmtgConfigParser
 from smtg.daemon.daemon import Daemon
 from smtg.daemon.daemonipc import DaemonServerSocket, DaemonClientSocket
-from smtg.daemon.comm.messages import makeErrorMsg, makeCommandMsg, makeMessage, strToMessage, COMMAND_MSG_TYPE
+from smtg.daemon.comm.messages import makeErrorMsg, makeCommandMsg, Message,  \
+                                      makeMessage, strToMessage, COMMAND_MSG_TYPE
 
 INVALID_ACTION = makeErrorMsg("invalid action")
 INVALID_ACTION_BAD = makeErrorMsg("invalid action", kill=True)
@@ -63,9 +64,12 @@ class SmtgDaemon(Daemon):
     want to know how to register your interface with the local smtg daemon.
     """
     def __init__(self, configfile=None, dprg="smtgd.py"):
+        # the name of the daemon when sending messages.
+        self.NAME="smtgd"
+        
         # generate a randomized killswitch only the process knows
         self.KILLSWITCH = str(random.random())[2:12]
-
+        
         # the kill-switch is the local communication identifier
         self.COM_ID = 'd'+self.KILLSWITCH 
 
@@ -92,13 +96,16 @@ class SmtgDaemon(Daemon):
     def stop(self):
         """Stops the local Smtg daemon by killing both threads."""
         # kill thread 2 with a quick blast from a socket
-        daemon=DaemonClientSocket(self.getComPort())
-        daemon.connect(self.COM_ID)
-        daemon.send("killmenow-"+self.KILLSWITCH)
-        daemon.close()
+        try:
+            daemon=DaemonClientSocket(self.getComPort())
+            daemon.connect(self.COM_ID)
+            daemon.send(makeCommandMsg("killmenow", kill=True))
+            daemon.close()
+        except Exception as e: 
+            raise e
         
-        # then kill the normal one.
-        Daemon.stop(self)
+        finally:# then say we're dead regardless.
+            Daemon.stop(self)
 
     def restart(self):
         """Restarts the daemon by killing both threads, and making sure their
@@ -106,10 +113,7 @@ class SmtgDaemon(Daemon):
         """
         try: 
             self.stop()
-            # then thread 1 will die in sleep_time or less seconds when it
-            # sees that the PID file is gone. This is to insure the daemons
-            # destruction..
-            time.sleep(10)
+            time.sleep(6)
         except: pass
         self.start()
                 
@@ -137,15 +141,15 @@ class SmtgDaemon(Daemon):
         # -thread 2, a server to listen to incoming connections 
         #    from interfaces
         try:
+            # start the interface thread
+            Thread(target=self.__t2).start()
+            
             # load the plug-in manager now and search for the plug-ins.
             self.pman = SmtgPluginManager(default_plugin_dirs)
             self.pman.collectPlugins()
             
             # activate all the plug-ins that need activating
             self.pman.activatePlugins()
-    
-            # start the interface thread
-            Thread(target=self.__t2).start()
     
             # start the pull loop.
             logging.debug("pull-thread started")
@@ -184,30 +188,41 @@ class SmtgDaemon(Daemon):
         
             # determine the person connecting
             identifier = client_socket.recv()
+            logging.debug("daemon received id: %s" % identifier)
             abilities = self._registered(identifier)
             if not abilities:
                 client_socket.send( CLOSING_CONNECTION )
                 client_socket.close()
+                continue
             
             # since there are abilities that this person can perform
             # ask for first action, if its not uber-important, throw
             # to new thread, otherwise execute it.
             client_socket.send( PROCEED_ACTION )
-            action = strToMessage(client_socket.recv())
-            if not action.getType() == COMMAND_MSG_TYPE:
+            answer = client_socket.recv()
+            logging.debug("daemon received: %s" % answer)
+            action = strToMessage(answer)
+            logging.debug("daemon running with action")
+            if action is None or action.getType() != COMMAND_MSG_TYPE:
+                logging.debug("daemon thinks action is bad...")
                 client_socket.send( INVALID_ACTION_BAD )
                 client_socket.close()
-                
-            if "stats" in abilities or "killswitch" in abilities:
-                if action.get("command") == "killmenow-"+self.KILLSWITCH:
-                    break
-                elif action.get("command") == "stats":
-                    client_socket.send(makeMessage("SMTG-D Running since: "+str(self.start_time)))
-                    client_socket.close()
-                    continue
+                continue
             
-            interfaces.append(client_socket)
-            Thread(target=self.__irunner, args=(client_socket, action, abilities, identifier)).start()
+            logging.debug("Message accepted by daemon, trying to run it now.")
+            if action.get("kill"):
+                if "status" in abilities or "killswitch" in abilities:
+                    if action.getValue() == "killmenow":
+                        break
+                    elif action.getValue() == "status":
+                        client_socket.send(makeMessage(self.NAME,"SMTG-D Running since: "+str(self.start_time)))
+                        client_socket.close()
+                        continue
+                    else:
+                        logging.warning("Action %s is not a valid single ability." % action.getValue())
+            else:
+                interfaces.append(client_socket)
+                Thread(target=self.__irunner, args=(client_socket, action, abilities, identifier)).start()
             
         TCPSock.close()
         self.__killall(interfaces)
@@ -222,8 +237,8 @@ class SmtgDaemon(Daemon):
         while True:
             try:
                 if not action: break
-                elif action.get("command") in abilities:
-                    if action.get("command") == "stats":
+                elif action.getValue() in abilities:
+                    if action.getValue() == "status":
                         interface.send(makeMessage("SMTG-D Running since: "+str(self.start_time)+"\n"))
                     else:
                         # TODO: add action response

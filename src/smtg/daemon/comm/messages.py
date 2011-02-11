@@ -34,20 +34,17 @@ def strToMessage(s):
     have to worry about this since the API 'should' take care of the 
     communication for you. 
     """
-    if s is not str:
-        logging.warning("Value given to convert to message was not a string.")
-        return None
     try:
-        tmp = json.load(s)
-    except:
-        logging.warning("String parsed was not a message type.")
+        tmp = json.loads(s)
+        logging.debug("value JSON unloaded was: %s" % tmp)
+    except Exception as e:
+        logging.error("Error parsing with JSON: %s" % e)
         return None
     
-    type = tmp.get("message")
-    if type==ERROR_MSG_TYPE or type==COMMAND_MSG_TYPE or type==BASE_MSG_TYPE:
+    if tmp.get("message") in MSG_TYPES:
         return Message(tmp)
     else:
-        logging.warning("String parsed was not a message type.")
+        logging.error("String parsed was not a message type: %s"% tmp.getType())
         return None
 
 
@@ -65,10 +62,10 @@ def makeErrorMsg(value, source=None, code=None, dead=False, kill=False):
                     "dead":dead,
                     "kill":kill})
 
-def makeCommandMsg(cmd, to, args=[], kill=False):
+def makeCommandMsg(cmd, source=None, args=[], kill=False):
     """ Utility method for quickly creating a command message."""
     return Message({"message":COMMAND_MSG_TYPE,
-                    "source":to,
+                    "source":source,
                     "command":cmd,
                     "args":args,
                     "kill":kill})
@@ -80,7 +77,7 @@ def makeMessage(source, value):
                     "value":value})
 
 
-class Message(dict):
+class Message():
     """ Message objects are used to make communication easier in the interface
     API. If you are writing your own interface in another language then it might
     be a good idea to get an idea of how these dictionaries are constructed.
@@ -96,21 +93,26 @@ class Message(dict):
         error, command, or base. These can be checked using the globals
         given: `ERROR_MSG_TYPE`, `COMMAND_MSG_TYPE` and `BASE_MSG_TYPE`
         """
-        return self.value.get("message")
+        return self.get("message")
     
     def getValue(self):
         """Gets the value that the message is carrying. For Command messages 
-        this is the name of the plug-in that the command is aimed towards. For
-        either Base or Error messages, the value is just the
+        this is the name of the command that is wanted to run. For either Base 
+        or Error messages, the value is just the
         """
         if self.getType()==COMMAND_MSG_TYPE:
-            return self.get("source")
+            return self.get("command")
         else:
             return self.get("value")
         
+    def __getattr__(self,name):
+        # get all the methods from the internal dictionary. Message is just a 
+        # decorator.
+        return getattr(self.value,name)
+    
     def __str__(self):
-        try:
-            return json.dump(self)
+        try: #output in compact form.
+            return json.dumps(self.value, separators=(',', ':'))
         except Exception as e:
             logging.error(e)
             raise e

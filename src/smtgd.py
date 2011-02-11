@@ -31,7 +31,7 @@ from optparse import OptionParser, SUPPRESS_HELP
 
 from smtg.daemon.daemonipc import DaemonClientSocket
 from smtg.daemon.SmtgDaemon import SmtgDaemon, getDaemonCommID
-
+from smtg.daemon.comm.messages import makeCommandMsg, strToMessage
    
 def main():
     parser = OptionParser( usage=__usage__, 
@@ -89,9 +89,9 @@ def main():
             daemon = SmtgDaemon()
             socket = DaemonClientSocket(portNum=daemon.getComPort())
             socket.connect(getDaemonCommID())
-            if socket.recv():# it connected
-                socket.send("stats")
-                print(socket.recv(),"\n")
+            if strToMessage(socket.recv()).getValue() == "proceed":# it connected
+                socket.send(makeCommandMsg("status",source="smtgd", kill=True))
+                print(strToMessage(socket.recv()).getValue(),"\n")
                 socket.close()
             else:
                 print("ERROR: couldn't communicate with daemon")

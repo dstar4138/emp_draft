@@ -22,7 +22,7 @@ limitations under the License.
 #   - remove id group
 #
 DEFAULT_PLUGIN_ACTIONS = []
-DEFAULT_INTERFACE_ACTIONS = ["stats", "plugin"]
+DEFAULT_INTERFACE_ACTIONS = ["status", "plugin"]
 
 
 
