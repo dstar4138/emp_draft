@@ -18,9 +18,10 @@ import logging
 
 
 # Can be used for type checking.
-ERROR_MSG   = "err"
-COMMAND_MSG = "cmd"
-BASE_MSG   = "base"
+ERROR_MSG_TYPE   = "err"
+COMMAND_MSG_TYPE = "cmd"
+BASE_MSG_TYPE    = "base"
+MSG_TYPES = [ERROR_MSG_TYPE, COMMAND_MSG_TYPE, BASE_MSG_TYPE]
 
 
 def strToMessage(s):
@@ -43,11 +44,40 @@ def strToMessage(s):
         return None
     
     type = tmp.get("message")
-    if type==ERROR_MSG or type==COMMAND_MSG or type==BASE_MSG:
+    if type==ERROR_MSG_TYPE or type==COMMAND_MSG_TYPE or type==BASE_MSG_TYPE:
         return Message(tmp)
     else:
         logging.warning("String parsed was not a message type.")
         return None
+
+
+def makeErrorMsg(value, source=None, code=None, dead=False, kill=False):
+    """ Utility method for quickly creating an error message."""
+    if code==None: 
+        return Message({"message":ERROR_MSG_TYPE,
+                    "source":source, 
+                    "dead":dead,
+                    "kill":kill})
+    else:    
+        return Message({"message":ERROR_MSG_TYPE,
+                    "source":source, 
+                    "code":code,
+                    "dead":dead,
+                    "kill":kill})
+
+def makeCommandMsg(cmd, to, args=[], kill=False):
+    """ Utility method for quickly creating a command message."""
+    return Message({"message":COMMAND_MSG_TYPE,
+                    "source":to,
+                    "command":cmd,
+                    "args":args,
+                    "kill":kill})
+
+def makeMessage(source, value):
+    """ Utility method for quickly creating a message."""
+    return Message({"message":BASE_MSG_TYPE,
+                    "source":source,
+                    "value":value})
 
 
 class Message(dict):
@@ -64,7 +94,7 @@ class Message(dict):
     def getType(self):
         """ Gets the type of the message, which is one of the following:
         error, command, or base. These can be checked using the globals
-        given: `ERROR_MSG`, `COMMAND_MSG` and `BASE_MSG`
+        given: `ERROR_MSG_TYPE`, `COMMAND_MSG_TYPE` and `BASE_MSG_TYPE`
         """
         return self.value.get("message")
     
@@ -73,8 +103,8 @@ class Message(dict):
         this is the name of the plug-in that the command is aimed towards. For
         either Base or Error messages, the value is just the
         """
-        if self.getType()==COMMAND_MSG:
-            return self.get("name")
+        if self.getType()==COMMAND_MSG_TYPE:
+            return self.get("source")
         else:
             return self.get("value")
         
@@ -97,7 +127,7 @@ to. So commands can vary by plug-in, see the plug-in API for handling these.
     
         {"message" : "cmd",
          "source"  : "plugin-name"/null,
-         "name"    : "name of command",
+         "command"    : "name of command",
          "args"    : ["list", "of", "arguments"],
          "kill"    : true/false }
          

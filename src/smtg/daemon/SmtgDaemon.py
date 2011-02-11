@@ -40,11 +40,12 @@ from smtg.config.logger import setup_logging
 from smtg.config.SmtgConfigParser import SmtgConfigParser
 from smtg.daemon.daemon import Daemon
 from smtg.daemon.daemonipc import DaemonServerSocket, DaemonClientSocket
+from smtg.daemon.comm.messages import makeErrorMsg, makeCommandMsg, makeMessage, strToMessage, COMMAND_MSG_TYPE
 
-
-INVALID_ACTION = "<invalid>"
-PROCEED_ACTION = "<proceed>"
-CLOSING_CONNECTION = "<closing>"
+INVALID_ACTION = makeErrorMsg("invalid action")
+INVALID_ACTION_BAD = makeErrorMsg("invalid action", kill=True)
+PROCEED_ACTION = makeCommandMsg("proceed")
+CLOSING_CONNECTION = makeErrorMsg("daemon closing connection", kill=True)
 
 
 def getDaemonCommID():
@@ -123,7 +124,8 @@ class SmtgDaemon(Daemon):
     def __killall(self,connections):
         """Somewhat-gracefully kills all connections in a list of connections"""
         for connection in connections:
-            try: connection.send(CLOSING_CONNECTION)
+            try: connection.send(makeErrorMsg("Daemon Shutting Down", 
+                                              dead=True, kill=True))
             except: pass
             finally:
                 try: connection.close()
@@ -191,12 +193,16 @@ class SmtgDaemon(Daemon):
             # ask for first action, if its not uber-important, throw
             # to new thread, otherwise execute it.
             client_socket.send( PROCEED_ACTION )
-            action = client_socket.recv()
+            action = strToMessage(client_socket.recv())
+            if not action.getType() == COMMAND_MSG_TYPE:
+                client_socket.send( INVALID_ACTION_BAD )
+                client_socket.close()
+                
             if "stats" in abilities or "killswitch" in abilities:
-                if action == "killmenow-"+self.KILLSWITCH:
+                if action.get("command") == "killmenow-"+self.KILLSWITCH:
                     break
-                elif action == "stats":
-                    client_socket.send("SMTG-D Running since: "+str(self.start_time))
+                elif action.get("command") == "stats":
+                    client_socket.send(makeMessage("SMTG-D Running since: "+str(self.start_time)))
                     client_socket.close()
                     continue
             
@@ -216,17 +222,17 @@ class SmtgDaemon(Daemon):
         while True:
             try:
                 if not action: break
-                elif action in abilities:
-                    if action == "stats":
-                        interface.send("SMTG-D Running since: "+str(self.start_time)+"\n")
+                elif action.get("command") in abilities:
+                    if action.get("command") == "stats":
+                        interface.send(makeMessage("SMTG-D Running since: "+str(self.start_time)+"\n"))
                     else:
                         # TODO: add action response
-                        interface.send("dummy-response. sorry commands not functional yet.")
+                        interface.send(makeMessage("dummy-response. sorry commands not functional yet."))
                 else:
                     interface.send( INVALID_ACTION )
             except Exception as e:
                 logging.error("Interface("+str(identifier)+")-"+str(e))
-            action = interface.recv();
+            action = strToMessage(interface.recv())
         
         # asked to break, thus close interface
         interface.close()
