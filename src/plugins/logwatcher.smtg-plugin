@@ -1,0 +1,11 @@
+[Core]
+Name = Log Watcher
+Module = logwatcher
+
+[Documentation]
+Description = This plug-in watches files, primarily log files. It can parse them and provide nice event descriptions.
+Author = Alexander Dean
+Version = 0.1
+Website = dstar4138.com
+Copyright = Apache v2
+

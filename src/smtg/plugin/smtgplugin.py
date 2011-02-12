@@ -40,8 +40,9 @@ class SmtgPlugin(IPlugin):
     based on those. In ALL plug-ins you must override any method with a
     '_' in front of it. Such as the ones listed below.
     """
-    def __init__(self):
+    def __init__(self, name):
         IPlugin.__init__(self)
+        self.__name__ = name
         
     def _check_status(self):
         """Checks the status of the plug-in. This may mean to check if a 
@@ -76,15 +77,15 @@ class FeedPlugin(SmtgPlugin):
     preferably user-set). 
     """
     
-    def __init__(self, importance=MID_IMPORTANCE):
-        SmtgPlugin.__init__(self)
+    def __init__(self, name, importance=MID_IMPORTANCE):
+        SmtgPlugin.__init__(self, name)
         self.update_importance=importance
 
     def change_importance(self, importance):
         if importance <= HIGH_IMPORTANCE or importance >= LOW_IMPORTANCE:  
             self.update_importance = importance
        
-    def update(self, args=[]):
+    def _update(self, args=[]):
         """This is the method that gets run every pull loop. Any updating
         processes that need to get done, need to get run in this method.
         """
@@ -104,8 +105,8 @@ class AlertPlugin(SmtgPlugin):
     to False.
     """
     
-    def __init__(self,auto_start=True):
-        SmtgPlugin.__init__(self)
+    def __init__(self, name, auto_start=True):
+        SmtgPlugin.__init__(self, name)
         self.start=auto_start
 
 

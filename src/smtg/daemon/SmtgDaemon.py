@@ -34,13 +34,13 @@ import logging
 from threading import Thread
 
 from smtg.plugin.SmtgPluginManager import SmtgPluginManager
-from smtg.daemon.security.register import isInterfaceRegistered
 from smtg.config.defaults import default_plugin_dirs
 from smtg.config.logger import setup_logging
 from smtg.config.SmtgConfigParser import SmtgConfigParser
 from smtg.daemon.daemon import Daemon
+from smtg.daemon.security.register import isInterfaceRegistered
 from smtg.daemon.daemonipc import DaemonServerSocket, DaemonClientSocket
-from smtg.daemon.comm.messages import makeErrorMsg, makeCommandMsg, Message,  \
+from smtg.daemon.comm.messages import makeErrorMsg, makeCommandMsg,  \
                                       makeMessage, strToMessage, COMMAND_MSG_TYPE
 
 INVALID_ACTION = makeErrorMsg("invalid action")
@@ -67,11 +67,8 @@ class SmtgDaemon(Daemon):
         # the name of the daemon when sending messages.
         self.NAME="smtgd"
         
-        # generate a randomized killswitch only the process knows
-        self.KILLSWITCH = str(random.random())[2:12]
-        
         # the kill-switch is the local communication identifier
-        self.COM_ID = 'd'+self.KILLSWITCH 
+        self.COM_ID = 'd'+str(random.random())[2:12]
 
         # get yourself a counter!
         self.start_time=time.time() 
@@ -162,7 +159,7 @@ class SmtgDaemon(Daemon):
                     # arguments. The only time arguments are needed 
                     # is if the plug-in was force updated by a command.
                     logging.debug("pulling feed %s" % feed.name)
-                    feed.plugin_object.update()
+                    feed.plugin_object._update() # FIXME: how to handle the result of feed pulls
                 
                 try:# sleep, and every five seconds check if still alive
                     count=0
@@ -230,7 +227,7 @@ class SmtgDaemon(Daemon):
         
     def __irunner(self, interface, action, abilities, identifier):
         """This method is run via a thread created in __t2. This method handles
-        communication between the daemon/plugins and the interface that is 
+        communication between the daemon/plug-ins and the interface that is 
         connecting to them.
         """
         logging.debug("Interface("+str(identifier)+")-thread started")
