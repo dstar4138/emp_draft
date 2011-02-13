@@ -1,7 +1,3 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-
-
 """
 Role
 ====
@@ -41,20 +37,13 @@ class IPlugin(object):
 	"""
 
 	def __init__(self):
-		"""
-		Set the basic variables.
-		"""
+		""" Set the basic variables. """
 		self.is_activated = False
 
 	def activate(self):
-		"""
-		Called at plugin activation.
-		"""
+		""" Called at plugin activation. """
 		self.is_activated = True
 
 	def deactivate(self):
-		"""
-		Called when the plugin is disabled.
-		"""
+		""" Called when the plugin is disabled. """
 		self.is_activated = False
-

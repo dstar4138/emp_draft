@@ -14,7 +14,7 @@ limitations under the License.
 """
 
 from smtg.plugin.smtgplugin import FeedPlugin, AlertPlugin
-from yapsy.PluginManagerDecorator import PluginManagerDecorator
+from yapsy.FilteredPluginManager import FilteredPluginManager
 
 
 # this is the default plugin descriptor extention. See yapsy.PluginInfo
@@ -25,13 +25,13 @@ PLUGIN_CATEGORIES = {"Feeds": FeedPlugin,
                      "Alerts": AlertPlugin}
 
 
-class SmtgPluginManager(PluginManagerDecorator):
+class SmtgPluginManager(FilteredPluginManager):
     """The plugin manager for the SMTG daemon.
     """
     
     def __init__(self, plugin_dirs):
         """ """
-        PluginManagerDecorator.__init__(self, 
+        FilteredPluginManager.__init__(self, 
                                         categories_filter=PLUGIN_CATEGORIES,
                                         directories_list=plugin_dirs,
                                         plugin_info_ext=PLUGIN_EXT)
@@ -40,8 +40,13 @@ class SmtgPluginManager(PluginManagerDecorator):
         """Activates all the valid FeedPlugins, and any AlertPlugins that 
         require an auto-start.
         """
-        #TODO: implement SmtgPluginManager.activatePlugins()
-        pass
+        #TODO: implement SmtgPluginManager.activatePlugins() to handle config files and alert plugins...
+        # right now i'll just activate everything.
+        plugs = self.getAllPlugins()
+        print("plugs",plugs)
+        for plug in plugs:
+            plug.activate()
+        
         
     def getFeedPlugins(self):
         """ Run all the feed plugin's pull loops. """
@@ -56,3 +61,6 @@ class SmtgPluginManager(PluginManagerDecorator):
     
     #XXX: does this method need to be here? an we send commands to the plugin manager?
     def runAlertThread(self, plugin_name):pass
+    
+    # TODO: define the filtering method
+    # def isPluginOk(self, info): return True

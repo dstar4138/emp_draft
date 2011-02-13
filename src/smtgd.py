@@ -41,11 +41,11 @@ def main():
                       help="start the SMTG daemon")
     parser.add_option("--stop", action="store_const", const=1, dest="state",  
                       help="stop a running SMTG daemon, may take some time to \
-                       close all plugins")
+                       close all plug-ins")
     parser.add_option("--restart", action="store_const", const=2, dest="state", 
                       help="restart a running SMTG daemon")
-    parser.add_option("--stats", action="store_const", const=1, dest="stats",
-                      help="show any stats about the currently running SMTG \
+    parser.add_option("--status", action="store_const", const=1, dest="status",
+                      help="show the status of the currently running SMTG \
                       daemon")
     
     ### the special daemonizer token. see Daemon class for more info ###
@@ -85,7 +85,7 @@ def main():
 
         # all the user wants to do is ask how the daemon is doing
         # so open up a port and ask it for some information.
-        elif options.stats != None:
+        elif options.status != None:
             daemon = SmtgDaemon()
             socket = DaemonClientSocket(portNum=daemon.getComPort())
             socket.connect(getDaemonCommID())

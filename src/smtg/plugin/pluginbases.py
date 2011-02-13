@@ -12,8 +12,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and 
 limitations under the License. 
 """
-
-from smtg.daemon.comm.messages import Message, makeErrorMsg, BASE_MSG_TYPE
+import logging
+from smtg.daemon.comm.messages import makeMessage, makeErrorMsg
 from smtg.plugin.smtgplugin import FeedPlugin, MID_IMPORTANCE
 
 class FileWatcher(FeedPlugin):
@@ -23,23 +23,28 @@ class FileWatcher(FeedPlugin):
         update  - forces an update
         status  - checks whether the plug-in is activated
         files   - returns a list of the files being watched
-        cfile x - gets the most recent changes to the file x
+    The actual changes to the files are not known since they are not cached
+    or stored in anyway. This can change if you want to write a more advanced
+    FileWatcher class.
     """
     def __init__(self, files, name="File Watcher", importance=MID_IMPORTANCE):
         FeedPlugin.__init__(self, name, importance)
         self._files = files # the internal files to watch.
-        self._commands =["help","update","status","files","cfile"]
+        self._commands =["help","update","status","files"]
     
     def _check_status(self):
         """ Returns whether or not this plug-in is activated or not. """
         return self.is_activated
     
     def _get_commands(self):
-        return Message({"message":BASE_MSG_TYPE, 
-                        "source":self.__name__,
-                        "value":self._commands})
+        """ Returns a message of the list of commands for this object. """
+        return makeMessage(self.__name__, self._commands)
         
     def _run_commands(self, msg):
+        """ Runs the command based on the message given. To overwrite this class,
+        you will need to adapt your _run_commands() method to handle all other new
+        commands you add.
+        """
         if msg is not dict and msg.get("message") != "cmd":
             return makeErrorMsg("message was invalid", source=self.__name__)
         
@@ -49,12 +54,12 @@ class FileWatcher(FeedPlugin):
             elif value == "update": self.update(msg.get("args"))
             elif value == "status": self._check_status()
             elif value == "files": self.get_files()
-            elif value == "cfile": self.get_file(msg.get("args"))
             else: return makeErrorMsg("command did not exist", source=self.__name__)
         else:
             return makeErrorMsg("command did not exist", source=self.__name__)
         
     def _update(self, args=[]):
+        logging.debug("updating the file watcher!")
         pass # TODO: implement filewatcher.update
         
         
@@ -63,9 +68,8 @@ class FileWatcher(FeedPlugin):
     
     def get_files(self):
         """ Gets the internal list of files """
-        return Message({"message":BASE_MSG_TYPE, 
-                        "source":self.__name__,
-                        "value":self._files})
+        return makeMessage(self.__name__, self._files)
     
     def get_file(self, args):
         pass # TODO: implement filewatcher.get_file
+

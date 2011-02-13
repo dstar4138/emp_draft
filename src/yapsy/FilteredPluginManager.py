@@ -12,7 +12,7 @@ API
 """
 
 from yapsy.IPlugin import IPlugin
-from yapsy.PluginManagerDecorator import  PluginManagerDecorator
+from yapsy.PluginManagerDecorator import PluginManagerDecorator
 
 
 class FilteredPluginManager(PluginManagerDecorator):
@@ -34,7 +34,7 @@ class FilteredPluginManager(PluginManagerDecorator):
 										directories_list,
 										plugin_info_ext)
 		# prepare the mapping of the latest version of each plugin
-		self.rejectedPlugins =  [ ] 
+		self.rejectedPlugins = [] 
 
 
 

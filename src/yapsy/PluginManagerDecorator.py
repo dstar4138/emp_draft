@@ -29,7 +29,7 @@ from yapsy.IPlugin import IPlugin
 
 
 class PluginManagerDecorator(object):
-	"""
+    """
 	Add several responsibilities to a plugin manager object in a
 	more flexible way than by mere subclassing. This is indeed an
 	implementation of the Decorator Design Patterns.
@@ -41,15 +41,15 @@ class PluginManagerDecorator(object):
 	subclasses). This way we can keep the plugin managers creation
 	simple when the user don't want to mix a lot of 'enhancements' on
 	the base class.
-	"""
+    """
 
-	def __init__(self, decorated_object=None,
+    def __init__(self, decorated_object=None,
 				 # The following args will only be used if we need to
 				 # create a default PluginManager
-				 categories_filter={"Default":IPlugin}, 
-				 directories_list=[os.path.dirname(__file__)], 
-				 plugin_info_ext="yapsy-plugin"):
-		"""
+                 categories_filter={"Default":IPlugin}, 
+                 directories_list=[os.path.dirname(__file__)], 
+                 plugin_info_ext="yapsy-plugin"):
+        """
 		Mimics the PluginManager's __init__ method and wraps an
 		instance of this class into this decorator class.
 		
@@ -67,32 +67,32 @@ class PluginManagerDecorator(object):
 		object passed to the init function under the exact keyword
 		``decorated_object``.
 		"""
-		
-		if decorated_object is None:
-			logging.debug("Creating a default PluginManager instance to be decorated.")
-			from yapsy.PluginManager import PluginManager
-			decorated_object = PluginManager(categories_filter, 
-											 directories_list,
-											 plugin_info_ext)
-		self._component = decorated_object
 
-	def __getattr__(self,name):
-		"""
-		Decorator trick copied from:
-		http://www.pasteur.fr/formation/infobio/python/ch18s06.html
-		"""
-# 		print "looking for %s in %s" % (name, self.__class__)
-		return getattr(self._component,name)
-		
-		
-	def collectPlugins(self):
-		"""
+        if decorated_object is None:
+            logging.debug("Creating a default PluginManager instance to be decorated.")
+            from yapsy.PluginManager import PluginManager
+            decorated_object = PluginManager(categories_filter, 
+                                             directories_list,
+                                             plugin_info_ext)
+        self._component = decorated_object
+
+    def __getattr__(self,name):
+        """
+        Decorator trick copied from:
+        http://www.pasteur.fr/formation/infobio/python/ch18s06.html
+        """
+        #print "looking for %s in %s" % (name, self.__class__)
+        return getattr(self._component,name)
+
+
+    def collectPlugins(self):
+        """
 		This function will usually be a shortcut to successively call
 		``self.locatePlugins`` and then ``self.loadPlugins`` which are
 		very likely to be redefined in each new decorator.
 
 		So in order for this to keep on being a "shortcut" and not a
 		real pain, I'm redefining it here.
-		"""
-		self.locatePlugins()
-		self.loadPlugins()
+        """
+        self.locatePlugins()
+        self.loadPlugins()

@@ -23,3 +23,14 @@ List of Contributors:
 Thibauld Nion
 Rob McMullen
 Roger Gammans
+
+
+Note From SMTG developers:
+There were some changes to this library here is a list of some of the 
+major ones:
+  - Converted entire library to python 3k
+  	 - This means we ran 2to3 on it, and added some of our own changes
+  - Added some logging data to make smtg debugging a little easier
+  - Removed some unused files to reduce smtg download size.
+  
+To see a complete change list, see the git commit log.
