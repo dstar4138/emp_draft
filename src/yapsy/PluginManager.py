@@ -67,7 +67,7 @@ information about the plugin.
 - it gives crucial information needed to be able to load the plugin
 
 - it provides some documentation like information like the plugin
-  author's name and a short description fo the plugin functionality.
+  author's name and a short description for the plugin functionality.
 
 Here is an example of what such a file should contain::
 
@@ -118,7 +118,7 @@ import sys
 import os
 import logging
 import configparser
-
+import pprint
 from yapsy.IPlugin import IPlugin
 from yapsy.PluginInfo import PluginInfo
 
@@ -401,15 +401,15 @@ class PluginManager(object):
 	%s""" % candidate_infofile)						
                         continue
                     # now determine the path of the file to execute,
-                    # depending on wether the path indicated is a
+                    # depending on whether the path indicated is a
                     # directory or a file
                     logging.debug("plugin_info.path=%s"%plugin_info.path)
                     if os.path.isdir(plugin_info.path):
-                        candidate_filepath = os.path.join(plugin_info.path,"__init__")
+                        candidate_filepath = os.path.join(plugin_info.path,"__init__") 
                     elif os.path.isfile(plugin_info.path+".py"):
                         candidate_filepath = plugin_info.path ; logging.debug("plugin was a file")
                     else: continue
-                    #print candidate_filepath
+                    logging.debug("candidate_filepath = %s" % candidate_filepath)
                     self._candidates.append((candidate_infofile, candidate_filepath, plugin_info))
         return len(self._candidates)
 
@@ -440,8 +440,11 @@ class PluginManager(object):
             if "__init__" in  os.path.basename(candidate_filepath):
                 sys.path.append(plugin_info.path)				
             try:
-                candidateMainFile = open(candidate_filepath+".py","r")	
-                exec(candidateMainFile,candidate_globals)
+                logging.debug("trying to exec: %s.py" % candidate_filepath)
+                #candidateMainFile = open(candidate_filepath+".py","r")
+                #goddamn you python...
+                exec(open(candidate_filepath+".py","rb").read(), candidate_globals)
+                logging.debug("got back from execing!!!")
             except Exception as e:
                 logging.debug("Unable to execute the code in plugin: %s" % candidate_filepath)
                 logging.debug("\t The following problem occured: %s %s " % (os.linesep, e))
@@ -452,6 +455,7 @@ class PluginManager(object):
             if "__init__" in  os.path.basename(candidate_filepath):
                 sys.path.remove(plugin_info.path)
             # now try to find and initialise the first subclass of the correct plugin interface
+            pp = pprint.PrettyPrinter(indent=4)
             for element in candidate_globals.values():
                 current_category = None
                 for category_name in self.categories_interfaces:
@@ -466,6 +470,7 @@ class PluginManager(object):
                 if current_category is not None:
                     if not (candidate_infofile in self._category_file_mapping[current_category]): 
                         # we found a new plugin: initialise it and search for the next one
+                        pp.pprint(element)
                         plugin_info.plugin_object = element()
                         plugin_info.category = current_category
                         self.category_mapping[current_category].append(plugin_info)
@@ -484,7 +489,8 @@ class PluginManager(object):
 		stores it in the appropriate slot of the category_mapping.
 		"""
         #print "%s.collectPlugins" % self.__class__		
-        self.locatePlugins()
+        tmp = self.locatePlugins()
+        logging.debug("Located %i plugin(s)." % int(tmp))
         self.loadPlugins()
 
 

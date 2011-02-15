@@ -154,13 +154,12 @@ class SmtgDaemon(Daemon):
                 
                 # get all active feed plug-ins
                 activeFeeds = self.pman.getFeedPlugins()
-                print(activeFeeds)
-                #for feed in activeFeeds:
+                for feed in activeFeeds:
                     # for each feed run the update function with no
                     # arguments. The only time arguments are needed 
                     # is if the plug-in was force updated by a command.
-                #   logging.debug("pulling feed %s" % feed.name)
-                #   feed.plugin_object._update() # FIXME: how to handle the result of feed pulls
+                    logging.debug("pulling feed %s" % feed.name)
+                    feed.plugin_object._update() # FIXME: how to handle the result of feed pulls
                 
                 try:# sleep, and every five seconds check if still alive
                     count=0

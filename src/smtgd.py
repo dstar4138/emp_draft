@@ -106,7 +106,8 @@ def main():
             daemon._run()            
 
     except Exception as e:
-        print("ERROR:",e)
+        #print("ERROR:",e)
+        raise e
  
 
 ### Run main() if the file is called correctly ###

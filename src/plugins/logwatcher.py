@@ -12,8 +12,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and 
 limitations under the License. 
 """
+import logging
+from plugins.filewatcher import FileWatcher
 
-from smtg.plugin.pluginbases import FileWatcher
 
 class LogWatcher(FileWatcher):
     """Essentially a file watcher except that it can handle log formatting and 
@@ -22,9 +23,5 @@ class LogWatcher(FileWatcher):
     better to use the FeedWatcher plug-in).
     """
     
-    def __init__(self, files):
-        FileWatcher.__init__(self, files, name="Log Watcher")
-    #TODO: write a new _update() to handle formatting of log files.
-    
-    
-    
+    def __init__(self):
+        FileWatcher.__init__(self, name="Log Watcher")

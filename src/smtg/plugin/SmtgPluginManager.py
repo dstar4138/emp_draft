@@ -45,7 +45,7 @@ class SmtgPluginManager(FilteredPluginManager):
         plugs = self.getAllPlugins()
         print("plugs",plugs)
         for plug in plugs:
-            plug.activate()
+            plug.plugin_object.activate()
         
         
     def getFeedPlugins(self):

@@ -1,0 +1,11 @@
+[Core]
+Name = File Watcher
+Module = filewatcher
+
+[Documentation]
+Description = This plug-in watches files, it doesn't do anything special. Use it like a demo for a working plug-in.
+Author = Alexander Dean
+Version = 0.1
+Website = dstar4138.com
+Copyright = Apache v2
+

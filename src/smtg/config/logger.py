@@ -17,7 +17,7 @@ import logging
 from smtg.config.SmtgConfigParser import SmtgConfigParser
 
 #The format of the logging to the screen, log file.
-_LOGGING_FORMAT_ = "%(levelname)-8s::{%(asctime)s} %(message)s"
+_LOGGING_FORMAT_ = "%(levelname)-8s::[%(asctime)s]-%(funcName)s@%(lineno)d %(message)s"
 _DATE_FORMAT_ = "%a, %d %b %Y %H:%M:%S"
 
 def setup_logging(configuration):

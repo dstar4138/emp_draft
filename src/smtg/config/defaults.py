@@ -119,7 +119,7 @@ else:  # the poor souls not using one of the above. :(
 
 
 #XXX: REMOVE ME LATER
-#default_configs["Logging"]["debug-mode"]="true"
+default_configs["Logging"]["debug-mode"]="true"
 
 ############## ALT MAIN TO TEST ######################
 #if __name__ == "__main__":
