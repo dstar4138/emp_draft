@@ -118,7 +118,6 @@ import sys
 import os
 import logging
 import configparser
-import pprint
 from yapsy.IPlugin import IPlugin
 from yapsy.PluginInfo import PluginInfo
 
@@ -413,7 +412,7 @@ class PluginManager(object):
                     self._candidates.append((candidate_infofile, candidate_filepath, plugin_info))
         return len(self._candidates)
 
-    def loadPlugins(self, callback=None):
+    def loadPlugins(self, callback=None, plugin_args=None):
         """
 		Load the candidate plugins that have been identified through a
 		previous call to locatePlugins.  For each plugin candidate
@@ -423,6 +422,10 @@ class PluginManager(object):
 		If a callback function is specified, call it before every load
 		attempt.  The ``plugin_info`` instance is passed as an argument to
 		the callback.
+		
+		The Plugin_args var specifies the arguments that are passed to the 
+		newly created plugins. (SMTG NOTE: we use this for passing an instance
+		of the internal CommRouter to pass notes through.)
 		"""
         # print "%s.loadPlugins" % self.__class__		
         if not hasattr(self, '_candidates'):
@@ -441,10 +444,12 @@ class PluginManager(object):
                 sys.path.append(plugin_info.path)				
             try:
                 logging.debug("trying to exec: %s.py" % candidate_filepath)
+                # this was python2.*
                 #candidateMainFile = open(candidate_filepath+".py","r")
-                #goddamn you python...
+                #exec(candidateMainFile,candidate_globals
+                
+                # this is python3.*
                 exec(open(candidate_filepath+".py","rb").read(), candidate_globals)
-                logging.debug("got back from execing!!!")
             except Exception as e:
                 logging.debug("Unable to execute the code in plugin: %s" % candidate_filepath)
                 logging.debug("\t The following problem occured: %s %s " % (os.linesep, e))
@@ -455,7 +460,6 @@ class PluginManager(object):
             if "__init__" in  os.path.basename(candidate_filepath):
                 sys.path.remove(plugin_info.path)
             # now try to find and initialise the first subclass of the correct plugin interface
-            pp = pprint.PrettyPrinter(indent=4)
             for element in candidate_globals.values():
                 current_category = None
                 for category_name in self.categories_interfaces:
@@ -470,8 +474,7 @@ class PluginManager(object):
                 if current_category is not None:
                     if not (candidate_infofile in self._category_file_mapping[current_category]): 
                         # we found a new plugin: initialise it and search for the next one
-                        pp.pprint(element)
-                        plugin_info.plugin_object = element()
+                        plugin_info.plugin_object = element(plugin_args)
                         plugin_info.category = current_category
                         self.category_mapping[current_category].append(plugin_info)
                         self._category_file_mapping[current_category].append(candidate_infofile)
@@ -490,7 +493,6 @@ class PluginManager(object):
 		"""
         #print "%s.collectPlugins" % self.__class__		
         tmp = self.locatePlugins()
-        logging.debug("Located %i plugin(s)." % int(tmp))
         self.loadPlugins()
 
 

@@ -1,4 +1,4 @@
-"""
+__copyright__ = """
 Copyright (c) 2010-2011 Alexander Dean (dstar@csh.rit.edu)
 Licensed under the Apache License, Version 2.0 (the "License"); 
 you may not use this file except in compliance with the License. 
@@ -14,21 +14,17 @@ limitations under the License.
 """
 
 
-# Alerts are of one of the following types only:
-ALERT_TYPE = ["email","sound","exec"]
 
-
-
-class Alert(object):
-    """The base type of alert that can be passed or created in SMTG """
+class CommRouter():
+    """The CommRouter internally handles inter-thread communication and
+    message passing. SMTG uses this to handle incoming Interface and Plug-in
+    messages and route them to the right Plug-in, Interface, Alert, or internal
+    handler. 
     
-    def __init__(self,type):
-        """Create the alert of a given type, see ALERT_TYPE 
-        for more information. 
-        """
-        self.type = type
-        
-        
-        
+    In order to utilize the router, the objects must be registered and an id 
+    must be given to it. This id must be used as the source/destination in the
+    Message.
+    """
+    def __init__(self):
+        pass
     
-#TODO: fix alerts. This needs to be more thought out.

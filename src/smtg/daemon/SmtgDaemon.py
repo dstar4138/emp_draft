@@ -38,10 +38,10 @@ from smtg.config.defaults import default_plugin_dirs
 from smtg.config.logger import setup_logging
 from smtg.config.SmtgConfigParser import SmtgConfigParser
 from smtg.daemon.daemon import Daemon
-from smtg.daemon.security.register import isInterfaceRegistered
+from smtg.daemon.comm.registration import isInterfaceRegistered
 from smtg.daemon.daemonipc import DaemonServerSocket, DaemonClientSocket
 from smtg.daemon.comm.messages import makeErrorMsg, makeCommandMsg,  \
-                                      makeMessage, strToMessage, COMMAND_MSG_TYPE
+                                      makeMsg, strToMessage, COMMAND_MSG_TYPE
 
 INVALID_ACTION = makeErrorMsg("invalid action")
 INVALID_ACTION_BAD = makeErrorMsg("invalid action", kill=True)
@@ -168,6 +168,9 @@ class SmtgDaemon(Daemon):
                         time.sleep(5)#every 5 seconds check state
                         if not self.isRunning(): break;
                 except: pass
+                
+            #TODO: save configs and finalize log
+            
             logging.debug("pull-thread is dead")
 
         except Exception as e:
@@ -211,7 +214,7 @@ class SmtgDaemon(Daemon):
                     if action.getValue() == "killmenow":
                         break
                     elif action.getValue() == "status":
-                        client_socket.send(makeMessage(self.NAME,"SMTG-D Running since: "+str(self.start_time)))
+                        client_socket.send(makeMsg(self.NAME,"SMTG-D Running since: "+str(self.start_time)))
                         client_socket.close()
                         continue
                     else:
@@ -235,10 +238,10 @@ class SmtgDaemon(Daemon):
                 if not action: break
                 elif action.getValue() in abilities:
                     if action.getValue() == "status":
-                        interface.send(makeMessage("SMTG-D Running since: "+str(self.start_time)+"\n"))
+                        interface.send(makeMsg("SMTG-D Running since: "+str(self.start_time)+"\n"))
                     else:
                         # TODO: add action response
-                        interface.send(makeMessage("dummy-response. sorry commands not functional yet."))
+                        interface.send(makeMsg("dummy-response. sorry commands not functional yet."))
                 else:
                     interface.send( INVALID_ACTION )
             except Exception as e:

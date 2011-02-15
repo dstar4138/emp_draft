@@ -29,12 +29,14 @@ class SmtgPluginManager(FilteredPluginManager):
     """The plugin manager for the SMTG daemon.
     """
     
-    def __init__(self, plugin_dirs):
+    def __init__(self, plugin_dirs, comreader=None):
         """ """
         FilteredPluginManager.__init__(self, 
                                         categories_filter=PLUGIN_CATEGORIES,
                                         directories_list=plugin_dirs,
                                         plugin_info_ext=PLUGIN_EXT)
+        self.msg_handler = comreader
+        
         
     def activatePlugins(self):
         """Activates all the valid FeedPlugins, and any AlertPlugins that 
@@ -46,7 +48,10 @@ class SmtgPluginManager(FilteredPluginManager):
         print("plugs",plugs)
         for plug in plugs:
             plug.plugin_object.activate()
-        
+    
+    def collectPlugins(self):
+        self.locatePlugins()
+        self.loadPlugins(plugin_args=self.msg_handler)
         
     def getFeedPlugins(self):
         """ Run all the feed plugin's pull loops. """

@@ -23,14 +23,16 @@ class FileWatcher(FeedPlugin):
         update  - forces an update
         status  - checks whether the plug-in is activated
         files   - returns a list of the files being watched
+        add x   - add file x to list of files being watched
+        rm x    - remove file x from list, x being an index or the file name.
     The actual changes to the files are not known since they are not cached
     or stored in anyway. This can change if you want to write a more advanced
     FileWatcher class.
     """
-    def __init__(self, files, name="File Watcher", importance=MID_IMPORTANCE):
-        FeedPlugin.__init__(self, name, importance)
-        self._files = files # the internal files to watch.
-        self._commands =["help","update","status","files"]
+    def __init__(self,comrouter, name="File Watcher", importance=MID_IMPORTANCE):
+        FeedPlugin.__init__(self, name, comrouter, importance)
+        self._files = [] # the internal files to watch.
+        self._commands =["help","update","status","files","add","rm"]
     
     def _check_status(self):
         """ Returns whether or not this plug-in is activated or not. """
@@ -54,6 +56,8 @@ class FileWatcher(FeedPlugin):
             elif value == "update": self.update(msg.get("args"))
             elif value == "status": self._check_status()
             elif value == "files": self.get_files()
+            elif value == "add": self.add_file(msg.get("args"))
+            elif value == "rm": self.rm_file(msg.get("args"))
             else: return makeErrorMsg("command did not exist", source=self.__name__)
         else:
             return makeErrorMsg("command did not exist", source=self.__name__)
@@ -72,4 +76,10 @@ class FileWatcher(FeedPlugin):
     
     def get_file(self, args):
         pass # TODO: implement filewatcher.get_file
+
+    def add_file(self, args):
+        pass # TODO: implement filewatcher.add_file
+
+    def rm_file(self, args):
+        pass # TODO: implement filewatcher.rm_file
 

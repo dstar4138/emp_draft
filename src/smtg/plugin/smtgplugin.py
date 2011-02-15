@@ -40,9 +40,10 @@ class SmtgPlugin(IPlugin):
     based on those. In ALL plug-ins you must override any method with a
     '_' in front of it. Such as the ones listed below.
     """
-    def __init__(self, name):
+    def __init__(self, name, comrouter):
         IPlugin.__init__(self)
         self.__name__ = name
+        self.msg_handler = comrouter
         
     def _check_status(self):
         """Checks the status of the plug-in. This may mean to check if a 
@@ -77,8 +78,8 @@ class FeedPlugin(SmtgPlugin):
     preferably user-set). 
     """
     
-    def __init__(self, name, importance=MID_IMPORTANCE):
-        SmtgPlugin.__init__(self, name)
+    def __init__(self, name, comrouter, importance=MID_IMPORTANCE):
+        SmtgPlugin.__init__(self, name, comrouter)
         self.update_importance=importance
 
     def change_importance(self, importance):
@@ -105,8 +106,8 @@ class AlertPlugin(SmtgPlugin):
     to False.
     """
     
-    def __init__(self, name, auto_start=True):
-        SmtgPlugin.__init__(self, name)
+    def __init__(self, name, comrouter, auto_start=True):
+        SmtgPlugin.__init__(self, name, comrouter)
         self.start=auto_start
 
 

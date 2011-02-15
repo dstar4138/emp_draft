@@ -23,5 +23,5 @@ class LogWatcher(FileWatcher):
     better to use the FeedWatcher plug-in).
     """
     
-    def __init__(self):
-        FileWatcher.__init__(self, name="Log Watcher")
+    def __init__(self, comrouter):
+        FileWatcher.__init__(self, comrouter, name="Log Watcher")
