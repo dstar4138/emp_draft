@@ -186,6 +186,7 @@ class SmtgDaemon(Daemon):
             client_socket = TCPSock.accept()
         
             # determine the person connecting
+            # FIXME: no longer connecting with an ID, the ID is given by the daemon 
             identifier = client_socket.recv()
             logging.debug("daemon received id: %s" % identifier)
             abilities = self._registered(identifier)

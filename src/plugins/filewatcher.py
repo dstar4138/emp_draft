@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License. 
 """
 import logging
-from smtg.daemon.comm.messages import makeMessage, makeErrorMsg
+from smtg.daemon.comm.messages import makeMsg, makeErrorMsg
 from smtg.plugin.smtgplugin import FeedPlugin, MID_IMPORTANCE
 
 class FileWatcher(FeedPlugin):
@@ -29,10 +29,14 @@ class FileWatcher(FeedPlugin):
     or stored in anyway. This can change if you want to write a more advanced
     FileWatcher class.
     """
-    def __init__(self,comrouter, name="File Watcher", importance=MID_IMPORTANCE):
+    def __init__(self, comrouter, name="File Watcher", importance=MID_IMPORTANCE):
         FeedPlugin.__init__(self, name, comrouter, importance)
         self._files = [] # the internal files to watch.
         self._commands =["help","update","status","files","add","rm"]
+    
+    def _handle_msg(self, msg):
+        pass #TODO: implement!!
+    
     
     def _check_status(self):
         """ Returns whether or not this plug-in is activated or not. """
@@ -40,7 +44,7 @@ class FileWatcher(FeedPlugin):
     
     def _get_commands(self):
         """ Returns a message of the list of commands for this object. """
-        return makeMessage(self.__name__, self._commands)
+        return makeMsg(self.__name__, self._commands)
         
     def _run_commands(self, msg):
         """ Runs the command based on the message given. To overwrite this class,
@@ -72,7 +76,7 @@ class FileWatcher(FeedPlugin):
     
     def get_files(self):
         """ Gets the internal list of files """
-        return makeMessage(self.__name__, self._files)
+        return makeMsg(self.__name__, self._files)
     
     def get_file(self, args):
         pass # TODO: implement filewatcher.get_file

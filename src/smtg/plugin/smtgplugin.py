@@ -24,6 +24,7 @@ __version__="0.5"
 
 
 from yapsy.IPlugin import IPlugin
+from smtg.daemon.comm.CommRouter import Routee
 
 # Importance changes its location in the list of updates.
 #   Higher the importance means the sooner it updates when
@@ -33,7 +34,7 @@ MID_IMPORTANCE  = 1
 HIGH_IMPORTANCE = 2
 
 
-class SmtgPlugin(IPlugin):
+class SmtgPlugin(IPlugin, Routee):
     """The base of all plug-ins for the SMTG platform. Please do not use
     this as your interface. Use either FeedPlugin, or AlertPlugin as your
     interface for your new plug-in since SMTG separates it's internals
@@ -42,8 +43,14 @@ class SmtgPlugin(IPlugin):
     """
     def __init__(self, name, comrouter):
         IPlugin.__init__(self)
+        Routee.__init__(self, name, comrouter)
         self.__name__ = name
-        self.msg_handler = comrouter
+        
+    def _handle_msg(self, msg):
+        """ Inherited from Routee, this is what runs when the Plug-in gets
+        a message from somewhere.
+        """
+        raise NotImplementedError("_handle_msg() not implemented")
         
     def _check_status(self):
         """Checks the status of the plug-in. This may mean to check if a 

@@ -13,7 +13,20 @@ See the License for the specific language governing permissions and
 limitations under the License. 
 """
 
-
+class Routee():
+    """ Base object for every internal possibility for communication 
+    Within SMTG,"""
+    def __init__(self, name, commrouter):
+        """ Create the Routee object and register it with a Router."""
+        self.msg_handler = commrouter
+        self.ID = self.msg_handler.register(name, self)
+        
+    def _handle_msg(self, msg):
+        """Called by the router, this is what handles the message
+        directed at this object.
+        """
+        raise NotImplementedError("_handle_msg() not implemented")
+        
 
 class CommRouter():
     """The CommRouter internally handles inter-thread communication and
@@ -26,5 +39,16 @@ class CommRouter():
     Message.
     """
     def __init__(self):
+        pass
+    
+    def register(self, name, ref):
+        """ Registers you with the router, and any messages that are directed
+        at you must"""
+        pass
+    
+    def isRegisteredByID(self, id):
+        pass
+    
+    def isRegisteredByName(self, name):
         pass
     

@@ -130,16 +130,15 @@ class Message():
             return self.get("value")
         
     def __getattr__(self,name):
-        # get all the methods from the internal dictionary. Message is just a 
-        # decorator.
+        # get all the methods from the internal dictionary. 
+        #Message is just a decorator to dict.
         return getattr(self.value,name)
     
     def __str__(self):
         try: #output in compact form.
             return json.dumps(self.value, separators=(',', ':'))
         except Exception as e:
-            logging.error(e)
-            raise e
+            logging.exception(e)
         
 """
 The below is the JSON structure for the message objects used in the 

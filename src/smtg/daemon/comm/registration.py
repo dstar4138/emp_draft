@@ -13,13 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License. 
 """
 
-# LATER: Add code for a registration table, maybe sqlite3?
-# needed functionality
-#   - add an (id,ips,level) group to table
-#   - edit level,ip of id in table
-#   - check if an id is in table
-#   - check level of id
-#   - remove id group
+# XXX: THIS FORM OF REGISTRATION IS NO LONGER NEEDED. Please Remove and exchange for new form.
 #
 DEFAULT_PLUGIN_ACTIONS = []
 DEFAULT_INTERFACE_ACTIONS = ["status", "plugin"]
