@@ -15,13 +15,10 @@ limitations under the License.
 
 #
 # The Daemon Socket classes are used to connect to a running daemon 
-# server with a TCP socket. Everything except for the ClientSocket
-# is non-specialized for SNTG, the only change is the need for an ID 
-# to be sent to the daemon upon connection. This can be removed if 
-# this is not part of your daemon communication protocol. See:
-# Daemon.connect(id).
+# server with a TCP socket. Everything is non-specialized for SNTG.
+# So have some fun with daemons in your own projects.
 #
-__version__ = "0.3"
+__version__ = "0.5"
 
 
 from socket import socket, AF_INET, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR
@@ -67,9 +64,7 @@ class DaemonServerSocket():
             self.socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
             self.socket.bind(("localhost",self.PORT_NUM))
             self.socket.listen(3) # standard, change if you want.
-            # we want the server socket to 
-            # never timeout and kill itself.
-            self.socket.setblocking(True)
+            self.socket.settimeout(2) #timeout in 2 seconds...
         else: 
             self.socket = altsocket
     
@@ -149,13 +144,12 @@ class DaemonClientSocket():
         self.socket = socket(AF_INET,SOCK_STREAM)
         self.socket.settimeout(0.5)#intentionally very low. DO NOT CHANGE!!
         
-    def connect(self,id):
+    def connect(self):
         """Connects to a currently running daemon on the local system. Make sure
         the daemon is utilizing a DaemonServerSocket and is the same encoding that
-        you are using. The ID given is automatically pushed to the server.
+        you are using.
         """
-        self.socket.connect(("localhost",self.PORT_NUM)) #remove me?
-        self.send(id)
+        self.socket.connect(("localhost",self.PORT_NUM))
         
     def send(self,msg):
         """Sends a string as a byte sequence to a DaemonServerSocekt at the 

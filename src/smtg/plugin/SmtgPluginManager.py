@@ -29,13 +29,13 @@ class SmtgPluginManager(FilteredPluginManager):
     """The plugin manager for the SMTG daemon.
     """
     
-    def __init__(self, plugin_dirs, comreader=None):
+    def __init__(self, plugin_dirs, commreader=None):
         """ """
         FilteredPluginManager.__init__(self, 
                                         categories_filter=PLUGIN_CATEGORIES,
                                         directories_list=plugin_dirs,
                                         plugin_info_ext=PLUGIN_EXT)
-        self.msg_handler = comreader
+        self.msg_handler = commreader
         
         
     def activatePlugins(self):

@@ -35,6 +35,8 @@ def strToMessage(s):
     have to worry about this since the API 'should' take care of the 
     communication for you. 
     """
+    if isinstance(s, Message): return s
+    
     try:
         tmp = json.loads(s)
         logging.debug("value JSON unloaded was: %s" % tmp)
@@ -74,16 +76,19 @@ def makeCommandMsg(cmd, source, dest=None, args=[], kill=False):
                     "args":args,
                     "kill":kill})
 
-def makeErrorMsg(value, source=None, code=None, dead=False, kill=False):
+#remove code??
+def makeErrorMsg(value, dest, source=None, code=None, dead=False, kill=False):
     """ Utility method for quickly creating an error message."""
     if code==None: 
         return Message({"message":ERROR_MSG_TYPE,
-                    "source":source, 
+                    "source":source,
+                    "dest":dest, 
                     "dead":dead,
                     "kill":kill})
     else:    
         return Message({"message":ERROR_MSG_TYPE,
-                    "source":source, 
+                    "source":source,
+                    "dest":dest, 
                     "code":code,
                     "dead":dead,
                     "kill":kill})

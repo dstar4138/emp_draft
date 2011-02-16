@@ -82,6 +82,10 @@ class CommRouter():
         for n,_ in self._registration.values():
             if name == n: return True
         return False
+
+    def deregister(self, id):
+        """ Removes a Routee from the registry. """
+        self._registration.pop(id, None)
     
     def sendMsg(self, msg):
         """ Adds a message to the message queue so it can be sent. """
