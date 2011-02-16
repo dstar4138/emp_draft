@@ -123,7 +123,6 @@ class SmtgDaemon(RDaemon):
         if action.get("kill"):
             if action.getValue() == "killmenow":
                 self._commrouter.sendMsg(makeAlertMsg("daemon closing connection", self.ID))
-                pass #FIXME: how to kill _t2???
             elif action.getValue() == "status":
                 self._commrouter.sendMsg(makeMsg(self.NAME,"SMTG-D Running since: "+str(self.start_time)))
             else:
@@ -162,11 +161,12 @@ class SmtgDaemon(RDaemon):
                 # get all active feed plug-ins
                 activeFeeds = self.pman.getFeedPlugins()
                 for feed in activeFeeds:
-                    # for each feed run the update function with no
-                    # arguments. The only time arguments are needed 
-                    # is if the plug-in was force updated by a command.
-                    logging.debug("pulling feed %s" % feed.name)
-                    feed.plugin_object._update() # FIXME: how to handle the result of feed pulls
+                    if feed.is_activated:
+                        # for each active feed run the update function with no
+                        # arguments. The only time arguments are needed 
+                        # is if the plug-in was force updated by a command.
+                        logging.debug("pulling feed %s" % feed.name)
+                        feed.plugin_object._update()
                 
                 try: # sleep, and every five seconds check if still alive
                     count=0

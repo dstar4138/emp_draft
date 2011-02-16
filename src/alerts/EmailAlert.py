@@ -13,21 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License. 
 """
 
-# XXX: THIS FORM OF REGISTRATION IS NO LONGER NEEDED. Please Remove and exchange for new form.
-#
-DEFAULT_PLUGIN_ACTIONS = []
-DEFAULT_INTERFACE_ACTIONS = ["status", "plugin"]
+from smtg.alert.smtgalert import Alerter
 
-
-
-def isPluginRegistered(id):
-    """ Checks if a given plugin ID is registered with the daemon process."""
-    #LATER: check registration table
-    return DEFAULT_PLUGIN_ACTIONS
-
-
-def isInterfaceRegistered(id):
-    """Checks if a given interface ID is registered with the daemon process."""
-    #LATER: check registration table
-    return DEFAULT_INTERFACE_ACTIONS
-
+class EmailAlert(Alerter):
+    pass #TODO: write an email alerter.

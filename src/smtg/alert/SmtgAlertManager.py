@@ -12,11 +12,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and 
 limitations under the License. 
 """
+from yapsy.PluginManagerDecorator import PluginManagerDecorator
 
-
-class AlertManager(object):
-    """
-    """
+class SmtgAlertManager(PluginManagerDecorator):
+    """ Handles alerters as similarly to how plug-ins work. """
     
     def __init__(self):
         pass
