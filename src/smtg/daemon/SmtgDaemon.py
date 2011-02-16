@@ -37,7 +37,8 @@ from smtg.plugin.SmtgPluginManager import SmtgPluginManager
 from smtg.config.defaults import default_plugin_dirs
 from smtg.config.logger import setup_logging
 from smtg.config.SmtgConfigParser import SmtgConfigParser
-from smtg.daemon.daemon import Daemon
+from smtg.daemon.RDaemon import RDaemon
+from smtg.daemon.comm.CommRouter import CommRouter, Routee
 from smtg.daemon.comm.registration import isInterfaceRegistered
 from smtg.daemon.daemonipc import DaemonServerSocket, DaemonClientSocket
 from smtg.daemon.comm.messages import makeErrorMsg, makeCommandMsg,  \
@@ -53,7 +54,7 @@ def getDaemonCommID():
     return 'd0000' #TODO: pull from registration file
 
 
-class SmtgDaemon(Daemon):
+class SmtgDaemon(RDaemon):
     """The Daemon for SMTG, all communication to this daemon goes through smtgd.py
     or the comm port via a DaemonClientSocket. To connect, ask for your comm id via
     getDaemonCommID() and use the DaemonClientSocket. 
@@ -83,9 +84,11 @@ class SmtgDaemon(Daemon):
         self.port = self.config.getint("Daemon", "port")
         self.sleep_time = self.config.getfloat("Daemon","update-speed") * 60.0;
 
+        #create the comm router for internal thread communication.
+        self._commrouter = CommRouter(self)
 
         # adjust by the configurations....
-        Daemon.__init__(self, pid,
+        RDaemon.__init__(self, pid, self.NAME, self._commrouter,
                         pchannel=self.port,
                         dprog=dprg,
                         dargs=configfile)
@@ -102,7 +105,7 @@ class SmtgDaemon(Daemon):
             raise e
         
         finally:# then say we're dead regardless.
-            Daemon.stop(self)
+            RDaemon.stop(self)
 
     def restart(self):
         """Restarts the daemon by killing both threads, and making sure their
@@ -132,12 +135,19 @@ class SmtgDaemon(Daemon):
                 try: connection.close()
                 except: pass       
   
+    def _handle_msg(self, msg):
+        pass # TODO: write msg handler for daemon   
+  
+  
     def _run(self):
         # push out the daemon threads.
         # -thread 1--this thread, an updating loop, pulls from sites.
         # -thread 2, a server to listen to incoming connections 
         #    from interfaces
         try:
+            #starts the comm router running to send messages!!
+            Thread(target=self._commrouter._run()).start()
+            
             # start the interface thread
             Thread(target=self.__t2).start()
             
@@ -161,7 +171,7 @@ class SmtgDaemon(Daemon):
                     logging.debug("pulling feed %s" % feed.name)
                     feed.plugin_object._update() # FIXME: how to handle the result of feed pulls
                 
-                try:# sleep, and every five seconds check if still alive
+                try: # sleep, and every five seconds check if still alive
                     count=0
                     while(count<self.sleep_time):
                         count+=5
@@ -169,8 +179,7 @@ class SmtgDaemon(Daemon):
                         if not self.isRunning(): break;
                 except: pass
                 
-            #TODO: save configs and finalize log
-            
+            # TODO: save configs and finalize log
             logging.debug("pull-thread is dead")
 
         except Exception as e:
@@ -233,6 +242,8 @@ class SmtgDaemon(Daemon):
         communication between the daemon/plug-ins and the interface that is 
         connecting to them.
         """
+        
+        #FIXME: this needs to change, internal commreader handles this.
         logging.debug("Interface("+str(identifier)+")-thread started")
         while True:
             try:

@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License. 
 """
 import logging
-from smtg.daemon.comm.messages import makeMsg, makeErrorMsg
+from smtg.daemon.comm.messages import makeMsg, makeErrorMsg, COMMAND_MSG_TYPE
 from smtg.plugin.smtgplugin import FeedPlugin, MID_IMPORTANCE
 
 class FileWatcher(FeedPlugin):
@@ -35,7 +35,10 @@ class FileWatcher(FeedPlugin):
         self._commands =["help","update","status","files","add","rm"]
     
     def _handle_msg(self, msg):
-        pass #TODO: implement!!
+        if msg is dict: # normally you shouldn't need to run this check
+            if msg.get("message") == COMMAND_MSG_TYPE:
+                self._msg_handler.sendMsg(self._run_commands(self, msg))
+        else: pass
     
     
     def _check_status(self):

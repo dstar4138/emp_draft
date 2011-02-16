@@ -127,6 +127,7 @@ class AlertPlugin(SmtgPlugin):
         raise NotImplementedError("_run() not implemented")
 
 
+    #XXX: remove this function? since Routee and commands do this...
     def _comm(self):
         """If ever the Alert plug-in needs to send an alert this method 
         returns the port number for the DaemonClientSocket or standard socket
