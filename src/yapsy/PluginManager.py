@@ -412,7 +412,7 @@ class PluginManager(object):
                     self._candidates.append((candidate_infofile, candidate_filepath, plugin_info))
         return len(self._candidates)
 
-    def loadPlugins(self, callback=None, plugin_args=None):
+    def loadPlugins(self, callback=None):
         """
 		Load the candidate plugins that have been identified through a
 		previous call to locatePlugins.  For each plugin candidate
@@ -422,10 +422,6 @@ class PluginManager(object):
 		If a callback function is specified, call it before every load
 		attempt.  The ``plugin_info`` instance is passed as an argument to
 		the callback.
-		
-		The Plugin_args var specifies the arguments that are passed to the 
-		newly created plugins. (SMTG NOTE: we use this for passing an instance
-		of the internal CommRouter to pass notes through.)
 		"""
         # print "%s.loadPlugins" % self.__class__		
         if not hasattr(self, '_candidates'):
@@ -474,7 +470,7 @@ class PluginManager(object):
                 if current_category is not None:
                     if not (candidate_infofile in self._category_file_mapping[current_category]): 
                         # we found a new plugin: initialise it and search for the next one
-                        plugin_info.plugin_object = element(plugin_args)
+                        plugin_info.plugin_object = element()
                         plugin_info.category = current_category
                         self.category_mapping[current_category].append(plugin_info)
                         self._category_file_mapping[current_category].append(candidate_infofile)
@@ -492,7 +488,7 @@ class PluginManager(object):
 		stores it in the appropriate slot of the category_mapping.
 		"""
         #print "%s.collectPlugins" % self.__class__		
-        tmp = self.locatePlugins()
+        self.locatePlugins()
         self.loadPlugins()
 
 

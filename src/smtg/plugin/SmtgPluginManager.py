@@ -12,9 +12,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and 
 limitations under the License. 
 """
-
+import logging
+from smtg.VariablePluginManager import VariablePluginManager
 from smtg.plugin.smtgplugin import LoopPlugin, SignalPlugin
-from yapsy.FilteredPluginManager import FilteredPluginManager
 
 
 # this is the default plugin descriptor extention. See yapsy.PluginInfo
@@ -25,19 +25,19 @@ PLUGIN_CATEGORIES = {"Feeds": LoopPlugin,
                      "Signal": SignalPlugin}
 
 
-class SmtgPluginManager(FilteredPluginManager):
+class SmtgPluginManager(VariablePluginManager):
     """The plugin manager for the SMTG daemon.
     """
     
-    def __init__(self, plugin_dirs, commreader=None):
+    def __init__(self, plugin_dirs, cfg_p, commreader):
         """ """
-        FilteredPluginManager.__init__(self, 
+        VariablePluginManager.__init__( self, cfg_p, commreader,
                                         categories_filter=PLUGIN_CATEGORIES,
                                         directories_list=plugin_dirs,
-                                        plugin_info_ext=PLUGIN_EXT)
-        self.msg_handler = commreader
+                                        plugin_info_ext=PLUGIN_EXT )
         
         
+          
     def activatePlugins(self):
         """Activates all the valid LoopPlugins, and any SignalPlugins that 
         require an auto-start.
@@ -48,15 +48,18 @@ class SmtgPluginManager(FilteredPluginManager):
         print("plugs",plugs)
         for plug in plugs:
             plug.plugin_object.activate()
-    
-    def collectPlugins(self):
-        self.locatePlugins()
-        self.loadPlugins(plugin_args=self.msg_handler)
         
     def getLoopPlugins(self):
         """ Run all the feed plugin's pull loops. """
-        return self.getPluginsOfCategory("Feeds") #TODO: sort based on importance
-    
+        self.printlist( self.getPluginsOfCategory("Feeds"))
+        b = sorted( self.getPluginsOfCategory("Feeds"),
+                       key=lambda x: x.plugin_object.update_importance)
+        self.printlist(b)
+        return b
+        
+    def printlist(self,list):
+        for feed in list:
+            print("\t(",feed.name,",",feed.plugin_object.update_importance,")")
     
     def runCommand(self,plugin_name,cmd):
         """ Search for the plugin with the name given and send the 

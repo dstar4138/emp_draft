@@ -61,10 +61,6 @@ class SmtgConfigParser(SafeConfigParser):
         if self.getfloat("Daemon","update-speed") < 1.0:
             self.set("Daemon","update-speed", 1.0)
 
-        #create the feed file if required.
-        #if self.getboolean("Alerts","alertby-feed"):
-        #    self.__try_setup_path(self.get("Alerts","feed-file"))
-
 
     def __try_setup_path(self,path):
         #LATER: check if path exists, if it doesn't the create it safely.
@@ -79,10 +75,24 @@ class SmtgConfigParser(SafeConfigParser):
         
         #adjust plugin name to compensate for cfg file
         plugin_name="plugin_"+plugin_name
-        return self.items(plugin_name)
+        try: return self.items(plugin_name)
+        except: return None
         
     
+    def getAlerterVars(self, alerter_name):
+        """A quick function to return the alerter's variables from the 
+        configuration files.
+        """
+        if type(alerter_name) != str: 
+            raise TypeError("Alerter Name must be a string")
+        
+        #adjust alerter name to compensate for cfg file
+        alerter_name="alerter_"+alerter_name
+        try: return self.items(alerter_name)
+        except: return None
     
-    
+    def save(self):
+        """ Save the configurations to the local user's configuration. """
+        pass #TODO: please implement me!
     
     

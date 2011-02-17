@@ -23,7 +23,7 @@ from smtg.daemon.comm.messages import ALERT_MSG_TYPE
 class Routee():
     """ Base object for every internal possibility for communication 
     Within SMTG,"""
-    def __init__(self, name, commrouter):
+    def __init__(self, commrouter, name="blank"):#FIXME: find another way of getting name?
         """ Create the Routee object and register it with a Router."""
         self.msg_handler = commrouter
         self.ID = self.msg_handler.register(name, self)
@@ -77,7 +77,7 @@ class CommRouter():
     
     def isRegisteredByName(self, name):
         """ Checks if the name is registered, returns the id or False if otherwise 
-        not registered
+        not registered.
         """
         for n,_ in self._registration.values():
             if name == n: return True
@@ -91,6 +91,10 @@ class CommRouter():
         """ Adds a message to the message queue so it can be sent. """
         self._msg_queue.put(msg) #blocks until open slot... SHOULDN'T HAPPEN!
         logging.debug("added message to send queue: %s" % msg)
+    
+    def flush(self):
+        """ Make sure all messages get where they are going before shutdown."""
+        pass #TODO: write me!
     
     def _run(self):
         """ This is the thread that runs and pushes messages everywhere. """

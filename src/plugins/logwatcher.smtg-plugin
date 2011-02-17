@@ -9,3 +9,6 @@ Version = 0.1
 Website = dstar4138.com
 Copyright = Apache v2
 
+[Defaults]
+files = 
+formats = 

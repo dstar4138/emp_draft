@@ -13,9 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License. 
 """
 
-from yapsy.PluginManagerDecorator import PluginManagerDecorator
 from smtg.alert.smtgalert import Alerter
-
+from smtg.VariablePluginManager import VariablePluginManager
 
 # this is the default alert descriptor extention. See yapsy.PluginInfo
 ALERT_EXT = "smtg-alert"
@@ -23,7 +22,7 @@ ALERT_EXT = "smtg-alert"
 # this is the default alert categories
 ALERT_CATEGORIES = {"Default": Alerter}
 
-class SmtgAlertManager(PluginManagerDecorator):
+class SmtgAlertManager(VariablePluginManager):
     """ Handles alerters as similarly to how plug-ins work. """
     
     def __init__(self):

@@ -32,5 +32,8 @@ major ones:
   	 - This means we ran 2to3 on it, and added some of our own changes
   - Added some logging data to make smtg debugging a little easier
   - Removed some unused files to reduce smtg download size.
+  - Added the ability to pass parameters when initiating plugins.
+  	 - we use this to pass the message handler and for giving the 
+  	 plugins some variables we pulled from the config file on start up
   
 To see a complete change list, see the git commit log.

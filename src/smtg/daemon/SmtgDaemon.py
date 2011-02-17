@@ -14,7 +14,7 @@ limitations under the License.
 """
 
 
-__version__ = "0.4.1"
+__version__ = "0.5.1"
 __description__ = """
 The SMTG-Daemon is responsible for alerts, updates and other plug-in
 communications. However, any interaction should go through smtg rather
@@ -29,7 +29,6 @@ the configuration files.
 """
 
 import time
-import random
 import logging
 from threading import Thread
 
@@ -47,22 +46,21 @@ from smtg.daemon.comm.messages import makeErrorMsg, makeCommandMsg, makeAlertMsg
 
 
 class SmtgDaemon(RDaemon):
-    """The Daemon for SMTG, all communication to this daemon goes through smtgd.py
-    or the comm port via a DaemonClientSocket. To connect, ask for your comm id via
-    getDaemonCommID() and use the DaemonClientSocket. 
+    """ The Daemon for SMTG, all communication to this daemon goes through smtgd.py
+    or the comm port via a DaemonClientSocket. To connect, get the port number and
+    then connect either with a regular UDP-8 encoded TCP socket or the 
+    DaemonClientSocket.
 
     The daemon handles the feed and connection loops along with all configuration
     validation. It does not handle interface registration, which should be done 
     through the registration steps handled by smtgd.py. Please look there if you
     want to know how to register your interface with the local smtg daemon.
     """
+    
     def __init__(self, configfile=None, dprg="smtgd.py"):
-        # the name of the daemon when sending messages.
-        self.NAME="smtgd"
-        
-        # the kill-switch is the local communication identifier
-        self.COM_ID = 'd'+str(random.random())[2:12]
-
+        """Load the configuration files, create the CommRouter, and then create 
+        the daemon. 
+        """
         # get yourself a counter!
         self.start_time=time.time() 
 
@@ -70,37 +68,35 @@ class SmtgDaemon(RDaemon):
         self.config=SmtgConfigParser(configfile)
         self.config.validateInternals()
         setup_logging(self.config)
-        
-        # this just simplifies things.
-        pid = self.config.get("Daemon", "pid-file")
-        self.port = self.config.getint("Daemon", "port")
-        self.sleep_time = self.config.getfloat("Daemon","update-speed") * 60.0;
 
-        #create the comm router for internal thread communication.
+        # create the comm router for internal thread communication.
         self._commrouter = CommRouter(self)
 
         # adjust by the configurations....
-        RDaemon.__init__(self, pid, self.NAME, self._commrouter,
-                        pchannel=self.port,
-                        dprog=dprg,
-                        dargs=configfile)
+        RDaemon.__init__(self, self.config.get("Daemon", "pid-file"),
+                              "SmtgDaemon", 
+                              self._commrouter,
+                              pchannel=self.config.getint("Daemon", "port"),
+                              dprog=dprg,
+                              dargs=configfile)
          
     def stop(self):
-        """Stops the local Smtg daemon by killing both threads."""
-        # kill thread 2 with a quick blast from a socket
-        try:
+        """ Stops the local Smtg daemon by killing both threads. """
+        try:   
+            # kill thread 3 (e.g. _t2) with a quick blast from a socket
             daemon=DaemonClientSocket(self.getComPort())
             daemon.connect()
             daemon.send(makeCommandMsg("killmenow", self.ID, kill=True))
             daemon.close()
-        except Exception as e: 
+        except Exception as e:
+            logging.exception(e)
             raise e
         
         finally:# then say we're dead regardless.
             RDaemon.stop(self)
 
     def restart(self):
-        """Restarts the daemon by killing both threads, and making sure their
+        """ Restarts the daemon by killing both threads, and making sure their
         both down before trying to run the daemon again.
         """
         try: 
@@ -111,6 +107,7 @@ class SmtgDaemon(RDaemon):
            
   
     def _handle_msg(self, msg):
+        """ Handles the incoming messages passed to it from the CommReader. """
         logging.debug("daemon received: %s" % msg)
         action = strToMessage(msg)
         logging.debug("daemon running with action")
@@ -137,24 +134,38 @@ class SmtgDaemon(RDaemon):
   
 
     def _run(self):
-        # push out the daemon threads.
-        # -thread 1--this thread, an updating loop, pulls from sites.
-        # -thread 2, a server to listen to incoming connections 
-        #    from interfaces
+        """ Starts the three threads that make up the internals of the daemon
+        and creates both the AlertManager and the PluginManager for them to pull
+        the Alerters and Plug-ins for the daemons use.
+        
+            Here is a quick outline of what each of the three threads are and 
+        do, for a more in-depth look, look at the consecutive method calls:
+        
+            - Thread 1: the current one, this is the pull loop. It updates the
+                LoopPlugins every time interval. This time interval is set by 
+                the configuration file.
+                
+            - Thread 2: this is the CommReader._run() method. It handles all
+                inter-thread communication. See CommReader for more info.
+                
+            - Thread 3: this is _t2(), it handles incoming communication to the
+                port that the SmtgDaemon listens to for Interfaces. See the
+                interface API for more information on how to talk to the 
+                daemon. 
+        """
         try:
             # load the plug-in manager now and search for the plug-ins.
             self.pman = SmtgPluginManager(default_plugin_dirs, 
-                                          commreader=self._commrouter)
+                                          self.config, 
+                                          self._commrouter)
             self.pman.collectPlugins()
-            
-            # activate all the plug-ins that need activating
             self.pman.activatePlugins()
     
     
             #TODO: start AlertManager and collect/activate alerters
     
     
-            #starts the comm router running to send messages!!
+            # starts the comm router running to send messages!!
             Thread(target=self._commrouter._run).start()
             
             # start the interface thread
@@ -166,32 +177,41 @@ class SmtgDaemon(RDaemon):
                 
                 # get all active feed plug-ins
                 activeFeeds = self.pman.getLoopPlugins()
-                for feed in activeFeeds:
-                    if feed.is_activated:
-                        # for each active feed run the update function with no
-                        # arguments. The only time arguments are needed 
-                        # is if the plug-in was force updated by a command.
-                        logging.debug("pulling feed %s" % feed.name)
-                        feed.plugin_object._update()
+                if activeFeeds:
+                    for feed in activeFeeds:
+                        if feed.is_activated:
+                            # for each active feed run the update function with no
+                            # arguments. The only time arguments are needed 
+                            # is if the plug-in was force updated by a command.
+                            logging.debug("pulling feed %s" % feed.name)
+                            feed.plugin_object._update()
                 
                 try: # sleep, and every five seconds check if still alive
                     count=0
-                    while(count<self.sleep_time):
+                    sleep_time = self.config.getfloat("Daemon","update-speed") * 60.0
+                    while(count<sleep_time):
                         count+=5
                         time.sleep(5)#every 5 seconds check state
                         if not self.isRunning(): break;
                 except: pass
                 
-            # TODO: save configs and finalize log
+            self._commrouter.flush()
+            self.config.save()
             logging.debug("pull-thread is dead")
 
         except Exception as e:
             logging.error("Pull-thread was killed by: %s" % str(e))
+            logging.exception(e)
+        
             
-    def __t2(self):# interface server, see _run()
+    def __t2(self):
+        """ Interface Server method, this runs in a new thread when the 
+        daemon starts. See _run() method for more information.
+        """
+        
         logging.debug("communication-thread started")
         # Create socket and bind to address
-        TCPSock = DaemonServerSocket(portNum=self.port)
+        TCPSock = DaemonServerSocket(portNum=self.getComPort())
         
         while self.isRunning(): # keep listening forever
             try:
@@ -210,4 +230,4 @@ class SmtgDaemon(RDaemon):
             
         TCPSock.close()
         logging.debug("communication-thread is dead")
-        
+

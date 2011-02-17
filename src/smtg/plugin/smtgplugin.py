@@ -20,80 +20,71 @@ limitations under the License.
 #  your program. Please consult this page for more information:
 #    http://wiki.python.org/moin/IntegratingPythonWithOtherLanguages
 #
-__version__="0.5"
+__version__="0.6"
 
 
 from yapsy.IPlugin import IPlugin
 from smtg.daemon.comm.CommRouter import Routee
 
 # Importance changes its location in the list of updates.
-#   Higher the importance means the sooner it updates when
-#   its their time.
-LOW_IMPORTANCE  = 0
-MID_IMPORTANCE  = 1
-HIGH_IMPORTANCE = 2
+#   The lower the number the closer to the beginning it is. You can
+# get fancy with the importance levels, or just use one of the ones
+# provided. 
+LOW_IMPORTANCE  = 100
+MID_IMPORTANCE  = 50
+HIGH_IMPORTANCE = 0
 
 
 class SmtgPlugin(IPlugin, Routee):
     """The base of all plug-ins for the SMTG platform. Please do not use
-    this as your interface. Use either FeedPlugin, or AlertPlugin as your
+    this as your interface. Use either LoopPlugin, or SignalPlugin as your
     interface for your new plug-in since SMTG separates it's internals
     based on those. In ALL plug-ins you must override any method with a
     '_' in front of it. Such as the ones listed below.
     """
-    def __init__(self, name, comrouter):
+    def __init__(self, conf, comrouter):
+        self.config = conf
         IPlugin.__init__(self)
-        Routee.__init__(self, name, comrouter)
-        self.__name__ = name
+        Routee.__init__(self, comrouter)
         
     def _handle_msg(self, msg):
         """ Inherited from Routee, this is what runs when the Plug-in gets
-        a message from somewhere.
+        a message from somewhere. This is here just to remind you that you
+        NEED to implement it.
         """
         raise NotImplementedError("_handle_msg() not implemented")
         
     def _check_status(self):
         """Checks the status of the plug-in. This may mean to check if a 
-        web-site is down, or if the connection is lost. Either way this 
-        method, returns a string.
+        web-site is down, or if the connection is lost. Should return a 
+        JSON Base Message as described by the API.
         """
         raise NotImplementedError("_check_status() not implemented")  
         
     def _get_commands(self):
-        """Returns a JSON object of the commands, their descriptions, any
-        arguments that the commands require, and some more. Please check the
-        SMTG Plugin API.
+        """Returns a dict object of the commands, the name to the description.
+        This is used by SMTG to update its help screen, it can also be asked
+        for by sending a command to the daemon for all possible commands.
         """
         raise NotImplementedError("_get_commands() not implemented")
-
-    def _run_command(self, msg):
-        """Runs one or more of the commands from the _get_commands() method.
-        The message object passed to this method is a JSON object. Please
-        check the SMTG Plugin API. 
-        """
-        raise NotImplementedError("_run_command() not implemented")
-    
 
 
 class LoopPlugin(SmtgPlugin):
     """Of the two arch-types of plug-ins this is the most commonly used.
-    The FeedPlugin is a plug-in who pulls or pushes its information to a 
-    feed at a regular interval. Used for RSS, blogs, and slowly updated 
-    page alerts, or even internal log scans on your own computer. These
-    plug-ins don't require special attention from the Daemon other than
-    knowing the feed's update frequency and its importance (both 
-    preferably user-set). 
+    The LoopPlugin is a plug-in who pulls information from a source on 
+    a regular interval. The importance of the LoopPlugin decides when it
+    gets to be pulled in the list of other LoopPlugins.
     """
     
-    def __init__(self, name, comrouter, importance=MID_IMPORTANCE):
-        SmtgPlugin.__init__(self, name, comrouter)
+    def __init__(self, conf, comrouter, importance=MID_IMPORTANCE):
+        SmtgPlugin.__init__(self, conf, comrouter)
         self.update_importance=importance
 
     def change_importance(self, importance):
         if importance <= HIGH_IMPORTANCE or importance >= LOW_IMPORTANCE:  
             self.update_importance = importance
        
-    def _update(self, args=[]):
+    def _update(self, *args):
         """This is the method that gets run every pull loop. Any updating
         processes that need to get done, need to get run in this method.
         """
@@ -113,27 +104,18 @@ class SignalPlugin(SmtgPlugin):
     to False.
     """
     
-    def __init__(self, name, comrouter, auto_start=True):
-        SmtgPlugin.__init__(self, name, comrouter)
+    def __init__(self, conf, comrouter, auto_start=True):
+        SmtgPlugin.__init__(self, conf, comrouter)
         self.start=auto_start
 
 
-    def _run(self,args=[]):
+    def _run(self, *args):
         """Signal Plug-ins get their own threads! This is the method that
         gets run when the plug-in is loaded into the daemon. When this 
         method returns the Plug-in is put into a waiting area until 
         hand-triggered.
         """
         raise NotImplementedError("_run() not implemented")
-
-
-    #XXX: remove this function? since Routee and commands do this...
-    def _comm(self):
-        """If ever the Signal plug-in needs to send an alert this method 
-        returns the port number for the DaemonClientSocket or standard socket
-        to connect on.
-        """
-        raise NotImplementedError("_comm() not implemented")
 
 
 

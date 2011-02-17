@@ -14,12 +14,11 @@ limitations under the License.
 """
 import logging
 from smtg.daemon.comm.messages import makeMsg, makeErrorMsg, COMMAND_MSG_TYPE
-from smtg.plugin.smtgplugin import LoopPlugin, MID_IMPORTANCE
+from smtg.plugin.smtgplugin import LoopPlugin
 
 class FileWatcher(LoopPlugin):
     """ Watches a list of local files for changes. Any changes are added 
     to the internal alert queue. The commands that can be sent to this are:
-        help x  - get help on command x, x is optional
         update  - forces an update
         status  - checks whether the plug-in is activated
         files   - returns a list of the files being watched
@@ -29,15 +28,15 @@ class FileWatcher(LoopPlugin):
     or stored in anyway. This can change if you want to write a more advanced
     FileWatcher class.
     """
-    def __init__(self, comrouter, name="File Watcher", importance=MID_IMPORTANCE):
-        LoopPlugin.__init__(self, name, comrouter, importance)
+    def __init__(self, conf, comrouter):
+        LoopPlugin.__init__(self, conf, comrouter)
         self._files = [] # the internal files to watch.
         self._commands =["help","update","status","files","add","rm"]
     
     def _handle_msg(self, msg):
         if msg is dict: # normally you shouldn't need to run this check
             if msg.get("message") == COMMAND_MSG_TYPE:
-                self._msg_handler.sendMsg(self._run_commands(self, msg))
+                self._msg_handler.sendMsg(self._runcmds(self, msg))
         else: pass
     
     
@@ -49,7 +48,7 @@ class FileWatcher(LoopPlugin):
         """ Returns a message of the list of commands for this object. """
         return makeMsg(self.__name__, self._commands)
         
-    def _run_commands(self, msg):
+    def _runcmds(self, msg):
         """ Runs the command based on the message given. To overwrite this class,
         you will need to adapt your _run_commands() method to handle all other new
         commands you add.
@@ -59,8 +58,7 @@ class FileWatcher(LoopPlugin):
         
         if msg.get("value") in self._commands:
             value = msg.get("value")
-            if value == "help": self.help(msg.get("args"))
-            elif value == "update": self.update(msg.get("args"))
+            if value == "update": self.update(msg.get("args"))
             elif value == "status": self._check_status()
             elif value == "files": self.get_files()
             elif value == "add": self.add_file(msg.get("args"))
@@ -69,14 +67,10 @@ class FileWatcher(LoopPlugin):
         else:
             return makeErrorMsg("command did not exist", source=self.__name__)
         
-    def _update(self, args=[]):
+    def _update(self, *args):
+        # TODO: implement filewatcher.update
         logging.debug("updating the file watcher!")
-        pass # TODO: implement filewatcher.update
         
-        
-    def help(self, args):
-        pass # TODO: implement filewatcher.help
-    
     def get_files(self):
         """ Gets the internal list of files """
         return makeMsg(self.__name__, self._files)

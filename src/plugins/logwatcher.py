@@ -14,6 +14,7 @@ limitations under the License.
 """
 import logging
 from plugins.filewatcher import FileWatcher
+from smtg.plugin.smtgplugin import HIGH_IMPORTANCE
 
 
 class LogWatcher(FileWatcher):
@@ -23,5 +24,7 @@ class LogWatcher(FileWatcher):
     better to use the FeedWatcher plug-in).
     """
     
-    def __init__(self, comrouter):
-        FileWatcher.__init__(self, comrouter, name="Log Watcher")
+    def __init__(self, conf, comrouter):
+        FileWatcher.__init__(self, conf, comrouter)
+        self.change_importance(HIGH_IMPORTANCE)
+        logging.debug("logwatcher set to high importance")

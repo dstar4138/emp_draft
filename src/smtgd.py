@@ -86,16 +86,18 @@ def main():
         # all the user wants to do is ask how the daemon is doing
         # so open up a port and ask it for some information.
         elif options.status != None:
-            daemon = SmtgDaemon()
-            socket = DaemonClientSocket(portNum=daemon.getComPort())
-            socket.connect()
-            if strToMessage(socket.recv()).getValue() == "proceed":# it connected
-                socket.send(makeCommandMsg("status",source="smtgd", kill=True))
-                print(strToMessage(socket.recv()).getValue(),"\n")
-                socket.close()
-            else:
+            try:
+                daemon = SmtgDaemon()
+                socket = DaemonClientSocket(portNum=daemon.getComPort())
+                socket.connect()
+                if strToMessage(socket.recv()).getValue() == "proceed":# it connected
+                    socket.send(makeCommandMsg("status",source="smtgd", kill=True))
+                    print(strToMessage(socket.recv()).getValue(),"\n")
+                    socket.close()
+                else:
+                    print("ERROR: couldn't communicate with daemon")
+            except:
                 print("ERROR: couldn't communicate with daemon")
-            
         # The process has been called via a background thread so 
         # it is ok to just run the daemon, we are one!!
         # see smtg.daemon.daemon.Daemon for more information.
@@ -106,8 +108,7 @@ def main():
             daemon._run()            
 
     except Exception as e:
-        #print("ERROR:",e)
-        raise e
+        print("ERROR:",e)
  
 
 ### Run main() if the file is called correctly ###

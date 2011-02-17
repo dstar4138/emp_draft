@@ -21,9 +21,9 @@ class RDaemon(Daemon, Routee):
     implementation. I didn't want people to have to remove or change the
     daemon code to create their own projects without internal CommRouters.
     """
-    def __init__(self, pidfile, name, commrouter, 
+    def __init__(self, pidfile, thename, commrouter, 
                  pchannel=8080, dprog=sys.argv[0], 
                  dargs="", daemonizerArg="-d", daemonizingCommand=None):
         """ Create a RDaemon, which is a daemon, that is also a Routee. """
         Daemon.__init__(self, pidfile, pchannel, dprog, dargs, daemonizerArg, daemonizingCommand)
-        Routee.__init__(self, name, commrouter) 
+        Routee.__init__(self, commrouter, name=thename) 
