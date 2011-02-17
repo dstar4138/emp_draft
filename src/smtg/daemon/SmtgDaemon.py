@@ -37,8 +37,9 @@ from smtg.plugin.SmtgPluginManager import SmtgPluginManager
 from smtg.config.defaults import default_plugin_dirs
 from smtg.config.logger import setup_logging
 from smtg.config.SmtgConfigParser import SmtgConfigParser
+
 from smtg.daemon.RDaemon import RDaemon
-from smtg.interface.interface import Interface
+from smtg.daemon.comm.interface import Interface
 from smtg.daemon.comm.CommRouter import CommRouter
 from smtg.daemon.daemonipc import DaemonServerSocket, DaemonClientSocket
 from smtg.daemon.comm.messages import makeErrorMsg, makeCommandMsg, makeAlertMsg,  \
@@ -134,18 +135,13 @@ class SmtgDaemon(RDaemon):
             # TODO: handle other actions
             pass
   
+
     def _run(self):
         # push out the daemon threads.
         # -thread 1--this thread, an updating loop, pulls from sites.
         # -thread 2, a server to listen to incoming connections 
         #    from interfaces
         try:
-            #starts the comm router running to send messages!!
-            Thread(target=self._commrouter._run).start()
-            
-            # start the interface thread
-            Thread(target=self.__t2).start()
-            
             # load the plug-in manager now and search for the plug-ins.
             self.pman = SmtgPluginManager(default_plugin_dirs, 
                                           commreader=self._commrouter)
@@ -154,12 +150,22 @@ class SmtgDaemon(RDaemon):
             # activate all the plug-ins that need activating
             self.pman.activatePlugins()
     
+    
+            #TODO: start AlertManager and collect/activate alerters
+    
+    
+            #starts the comm router running to send messages!!
+            Thread(target=self._commrouter._run).start()
+            
+            # start the interface thread
+            Thread(target=self.__t2).start()
+    
             # start the pull loop.
             logging.debug("pull-thread started")
             while self.isRunning():
                 
                 # get all active feed plug-ins
-                activeFeeds = self.pman.getFeedPlugins()
+                activeFeeds = self.pman.getLoopPlugins()
                 for feed in activeFeeds:
                     if feed.is_activated:
                         # for each active feed run the update function with no
@@ -182,7 +188,6 @@ class SmtgDaemon(RDaemon):
         except Exception as e:
             logging.error("Pull-thread was killed by: %s" % str(e))
             
-    
     def __t2(self):# interface server, see _run()
         logging.debug("communication-thread started")
         # Create socket and bind to address

@@ -15,5 +15,5 @@ limitations under the License.
 
 from smtg.alert.smtgalert import Alerter
 
-class EmailAlert(Alerter):
+class EmailAlerter(Alerter):
     pass #TODO: write an email alerter.

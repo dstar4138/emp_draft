@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License. 
 """
 
-from smtg.plugin.smtgplugin import FeedPlugin, AlertPlugin
+from smtg.plugin.smtgplugin import LoopPlugin, SignalPlugin
 from yapsy.FilteredPluginManager import FilteredPluginManager
 
 
@@ -21,8 +21,8 @@ from yapsy.FilteredPluginManager import FilteredPluginManager
 PLUGIN_EXT = "smtg-plugin"
 
 # this is the default plugin categories
-PLUGIN_CATEGORIES = {"Feeds": FeedPlugin,
-                     "Alerts": AlertPlugin}
+PLUGIN_CATEGORIES = {"Feeds": LoopPlugin,
+                     "Signal": SignalPlugin}
 
 
 class SmtgPluginManager(FilteredPluginManager):
@@ -39,7 +39,7 @@ class SmtgPluginManager(FilteredPluginManager):
         
         
     def activatePlugins(self):
-        """Activates all the valid FeedPlugins, and any AlertPlugins that 
+        """Activates all the valid LoopPlugins, and any SignalPlugins that 
         require an auto-start.
         """
         #TODO: implement SmtgPluginManager.activatePlugins() to handle config files and alert plugins...
@@ -53,9 +53,9 @@ class SmtgPluginManager(FilteredPluginManager):
         self.locatePlugins()
         self.loadPlugins(plugin_args=self.msg_handler)
         
-    def getFeedPlugins(self):
+    def getLoopPlugins(self):
         """ Run all the feed plugin's pull loops. """
-        return self.getPluginsOfCategory("Feeds")
+        return self.getPluginsOfCategory("Feeds") #TODO: sort based on importance
     
     
     def runCommand(self,plugin_name,cmd):

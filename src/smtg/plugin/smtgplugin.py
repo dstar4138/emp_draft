@@ -75,7 +75,7 @@ class SmtgPlugin(IPlugin, Routee):
     
 
 
-class FeedPlugin(SmtgPlugin):
+class LoopPlugin(SmtgPlugin):
     """Of the two arch-types of plug-ins this is the most commonly used.
     The FeedPlugin is a plug-in who pulls or pushes its information to a 
     feed at a regular interval. Used for RSS, blogs, and slowly updated 
@@ -100,9 +100,9 @@ class FeedPlugin(SmtgPlugin):
         raise NotImplementedError("_update() not implemented") 
 
             
-class AlertPlugin(SmtgPlugin):
-    """The AlertPlugin type waits for a message rather than pulling on 
-    an interval like the FeedPlugin. These are necessary for high 
+class SignalPlugin(SmtgPlugin): 
+    """The SignalPlugin type waits for a message rather than pulling on 
+    an interval like the LoopPlugin. These are necessary for high 
     'importance' items, such as for alert systems such as un-authorized 
     room entrance system or even a simplistic chat system.
     
@@ -119,7 +119,7 @@ class AlertPlugin(SmtgPlugin):
 
 
     def _run(self,args=[]):
-        """Alert Plug-ins get their own threads! This is the method that
+        """Signal Plug-ins get their own threads! This is the method that
         gets run when the plug-in is loaded into the daemon. When this 
         method returns the Plug-in is put into a waiting area until 
         hand-triggered.
@@ -129,7 +129,7 @@ class AlertPlugin(SmtgPlugin):
 
     #XXX: remove this function? since Routee and commands do this...
     def _comm(self):
-        """If ever the Alert plug-in needs to send an alert this method 
+        """If ever the Signal plug-in needs to send an alert this method 
         returns the port number for the DaemonClientSocket or standard socket
         to connect on.
         """

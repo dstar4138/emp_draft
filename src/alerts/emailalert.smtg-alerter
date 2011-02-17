@@ -1,0 +1,11 @@
+[Core]
+Name = Email Alerter
+Module = EmailAlerter
+
+[Documentation]
+Description = This alerter will email you when there is an alert triggered.
+Author = Alexander Dean
+Version = 0.1
+Website = dstar4138.com
+Copyright = Apache v2
+

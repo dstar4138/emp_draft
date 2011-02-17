@@ -14,9 +14,9 @@ limitations under the License.
 """
 import logging
 from smtg.daemon.comm.messages import makeMsg, makeErrorMsg, COMMAND_MSG_TYPE
-from smtg.plugin.smtgplugin import FeedPlugin, MID_IMPORTANCE
+from smtg.plugin.smtgplugin import LoopPlugin, MID_IMPORTANCE
 
-class FileWatcher(FeedPlugin):
+class FileWatcher(LoopPlugin):
     """ Watches a list of local files for changes. Any changes are added 
     to the internal alert queue. The commands that can be sent to this are:
         help x  - get help on command x, x is optional
@@ -30,7 +30,7 @@ class FileWatcher(FeedPlugin):
     FileWatcher class.
     """
     def __init__(self, comrouter, name="File Watcher", importance=MID_IMPORTANCE):
-        FeedPlugin.__init__(self, name, comrouter, importance)
+        LoopPlugin.__init__(self, name, comrouter, importance)
         self._files = [] # the internal files to watch.
         self._commands =["help","update","status","files","add","rm"]
     
