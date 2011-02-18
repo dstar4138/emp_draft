@@ -18,7 +18,7 @@ limitations under the License.
 #of operating system, and system setup.
 ######
 import logging
-import sys
+import sys, os
 
 # the platform you are running on!
 CUR_PLATFORM = sys.platform
@@ -51,21 +51,8 @@ default_configs = {
     # allowed to go, but it can be adjusted to longer than 1 minute.
       "update-speed" : "1.0",
  
-    # whether or not registration is required before processing an interface
-    # or a plugin.
-      "req-iface-reg": "true",    
-      "req-plugin-reg": "true", 
-      
-    #registration file location.
-      "reg-file":"",
-
-    # make sure to turn on certain alert types. This adds for a bit more 
-    # security if the daemon is already running with the current cfg. 
-      "alertby-email" : "false",  # email a given email address
-      "alertby-sound" : "false",  # alert via a sound file
-      "alertby-sms"   : "false",  # send a txt message to a phone
-      "alertby-exec"  : "false",  # execute a command line program
-      "alertby-feed"  : "false"   # save alert to an XML file for external use
+      # only allow local interface connections.
+      "local-only":"true"
     },
 
 #Logging section-
@@ -90,6 +77,9 @@ default_configs = {
 default_cfg_files = []
 default_plugin_dirs = []
 
+# this is the file that the config parser will write to when its closing.
+writeto_cfg_file = None
+
 #
 # Set up OS specific variables in the default configuration variable, we can
 # also set up some other stuff if need be. Namely call setup.py if there is 
@@ -97,16 +87,16 @@ default_plugin_dirs = []
 #
 if CUR_PLATFORM.find("linux")!=-1:    #linux systems.
     default_configs["Daemon"]["pid-file"]="/var/tmp/smtg.pid"
-    default_configs["Daemon"]["reg-file"]="~/.smtg/registration"
 
-    default_configs["Logging"]["log-file"]="smtg.log"
+    default_configs["Logging"]["log-file"]=os.path.expanduser("~/.smtg/errors.log")
 
+    writeto_cfg_file = os.path.expanduser("~/.smtg/smtg.cfg")
     default_cfg_files.append("/etc/smtg/smtg.cfg")
-    default_cfg_files.append("~/.smtg/smtg.cfg")
+    default_cfg_files.append(writeto_cfg_file)
     # then the given file will be read in at the end in SmtgConfigParser
 
     default_plugin_dirs.append("/etc/smtg/plugins")
-    default_plugin_dirs.append("~/.smtg/plugins")
+    default_plugin_dirs.append(os.path.expanduser("~/.smtg/plugins"))
     default_plugin_dirs.append("plugins") # look in the local src/plugins directory too
 
 

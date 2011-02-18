@@ -22,7 +22,7 @@ PLUGIN_EXT = "smtg-plugin"
 
 # this is the default plugin categories
 PLUGIN_CATEGORIES = {"Feeds": LoopPlugin,
-                     "Signal": SignalPlugin}
+                     "Signals": SignalPlugin}
 
 
 class SmtgPluginManager(VariablePluginManager):
@@ -45,16 +45,13 @@ class SmtgPluginManager(VariablePluginManager):
         #TODO: implement SmtgPluginManager.activatePlugins() to handle config files and alert plugins...
         # right now i'll just activate everything.
         plugs = self.getAllPlugins()
-        print("plugs",plugs)
         for plug in plugs:
             plug.plugin_object.activate()
         
     def getLoopPlugins(self):
         """ Run all the feed plugin's pull loops. """
-        self.printlist( self.getPluginsOfCategory("Feeds"))
         b = sorted( self.getPluginsOfCategory("Feeds"),
                        key=lambda x: x.plugin_object.update_importance)
-        self.printlist(b)
         return b
         
     def printlist(self,list):

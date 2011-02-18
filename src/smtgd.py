@@ -26,7 +26,7 @@ is the user interface and not a background daemon server. Please note that
 all the daemon controls are also provided in the smtg interface for you.
 """
 
-import sys
+import sys,logging
 from optparse import OptionParser, SUPPRESS_HELP
 
 from smtg.daemon.daemonipc import DaemonClientSocket
@@ -88,16 +88,27 @@ def main():
         elif options.status != None:
             try:
                 daemon = SmtgDaemon()
-                socket = DaemonClientSocket(portNum=daemon.getComPort())
-                socket.connect()
-                if strToMessage(socket.recv()).getValue() == "proceed":# it connected
-                    socket.send(makeCommandMsg("status",source="smtgd", kill=True))
-                    print(strToMessage(socket.recv()).getValue(),"\n")
-                    socket.close()
-                else:
-                    print("ERROR: couldn't communicate with daemon")
-            except:
-                print("ERROR: couldn't communicate with daemon")
+                port = daemon.getComPort()
+                if port is not None:
+                    socket = DaemonClientSocket(portNum=port)
+                    socket.connect()
+                    msg = strToMessage(socket.recv())
+                    logging.debug("smtgd got back: %s"%msg)
+                    if msg.getValue() == "proceed":# it connected
+                        myId= msg.getDestination()
+                        socket.send(makeCommandMsg("status",source=myId, kill=True))
+                        while 1:
+                            msg = socket.recv()
+                            if not msg: continue
+                            else: 
+                                print(strToMessage(msg).getValue(),"\n")
+                                break
+                        socket.close()
+                    else: print("ERROR: Daemon rejected connection attempt.")
+                else: print("ERROR: Daemon is not running.")
+            except Exception as e:
+                print("ERROR: couldn't communicate with daemon: "+str(e))
+                
         # The process has been called via a background thread so 
         # it is ok to just run the daemon, we are one!!
         # see smtg.daemon.daemon.Daemon for more information.

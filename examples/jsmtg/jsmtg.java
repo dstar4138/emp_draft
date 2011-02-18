@@ -127,7 +127,7 @@ public class jsmtg implements Runnable{
 
 	         pane = new JPanel(new FlowLayout(FlowLayout.RIGHT));
 		      pane.add(new JLabel("Interface ID:"));
-		      interfaceField = new JTextField(10); interfaceField.setText("i00000001");
+		      interfaceField = new JTextField(10);
 		      pane.add(interfaceField);
 		      interfaceField.addFocusListener(new FocusAdapter() {
 		            public void focusLost(FocusEvent e) {
@@ -410,7 +410,6 @@ public class jsmtg implements Runnable{
 	               in = new BufferedReader(new 
 	                  InputStreamReader(socket.getInputStream(), "UTF8"));
 	               out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF8"));
-	               toSend.append(interfaceField.getText());
 	               changeStatusTS(CONNECTED, true);
 	            }
 	            // If error, clean up and output an error message

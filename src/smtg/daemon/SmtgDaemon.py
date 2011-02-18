@@ -27,9 +27,9 @@ The Daemon assumes that the installation went correctly as directory
 settings and default subprocess/threading control is pulled from
 the configuration files.
 """
-
 import time
 import logging
+from socket import timeout
 from threading import Thread
 
 from smtg.plugin.SmtgPluginManager import SmtgPluginManager
@@ -38,9 +38,8 @@ from smtg.config.logger import setup_logging
 from smtg.config.SmtgConfigParser import SmtgConfigParser
 
 from smtg.daemon.RDaemon import RDaemon
-from smtg.daemon.comm.interface import Interface
-from smtg.daemon.comm.CommRouter import CommRouter
-from smtg.daemon.daemonipc import DaemonServerSocket, DaemonClientSocket
+from smtg.daemon.comm.CommRouter import CommRouter, Interface
+from smtg.daemon.daemonipc import DaemonServerSocket
 from smtg.daemon.comm.messages import makeErrorMsg, makeCommandMsg, makeAlertMsg,  \
                                       makeMsg, strToMessage, COMMAND_MSG_TYPE 
 
@@ -70,30 +69,17 @@ class SmtgDaemon(RDaemon):
         setup_logging(self.config)
 
         # create the comm router for internal thread communication.
-        self._commrouter = CommRouter(self)
+        self.msg_handler = CommRouter()
 
         # adjust by the configurations....
         RDaemon.__init__(self, self.config.get("Daemon", "pid-file"),
-                              "SmtgDaemon", 
-                              self._commrouter,
+                              "daemon", 
+                              self.msg_handler,
                               pchannel=self.config.getint("Daemon", "port"),
                               dprog=dprg,
                               dargs=configfile)
          
-    def stop(self):
-        """ Stops the local Smtg daemon by killing both threads. """
-        try:   
-            # kill thread 3 (e.g. _t2) with a quick blast from a socket
-            daemon=DaemonClientSocket(self.getComPort())
-            daemon.connect()
-            daemon.send(makeCommandMsg("killmenow", self.ID, kill=True))
-            daemon.close()
-        except Exception as e:
-            logging.exception(e)
-            raise e
-        
-        finally:# then say we're dead regardless.
-            RDaemon.stop(self)
+
 
     def restart(self):
         """ Restarts the daemon by killing both threads, and making sure their
@@ -113,21 +99,20 @@ class SmtgDaemon(RDaemon):
         logging.debug("daemon running with action")
         if action is None or action.getType() != COMMAND_MSG_TYPE:
             logging.debug("daemon thinks action is bad...")
-            self._commrouter.sendMsg(makeErrorMsg("invalid action",
+            self.msg_handler.sendMsg(makeErrorMsg("invalid action",
                                                   action.getSource()))
             return
             
         logging.debug("Message accepted by daemon, trying to run it now.")
         if action.get("kill"):
             if action.getValue() == "killmenow":
-                self._commrouter.sendMsg(makeAlertMsg("daemon closing connection", self.ID))
+                self.msg_handler.sendMsg(makeAlertMsg("daemon closing connection", self.ID))
             elif action.getValue() == "status":
-                self._commrouter.sendMsg(makeMsg(self.NAME,"SMTG-D Running since: "+str(self.start_time)))
+                self.msg_handler.sendMsg(makeMsg("SMTG-D Running since: "+str(self.start_time),None,action.getSource()))
             else:
                 logging.warning("Action %s is not a valid single ability." % action.getValue())
-                self._commrouter.sendMsg(makeErrorMsg("invalid action",
+                self.msg_handler.sendMsg(makeErrorMsg("invalid action",
                                                   action.getSource()))
-            self._commrouter.deregister(action.getSource())
         else:
             # TODO: handle other actions
             pass
@@ -157,7 +142,7 @@ class SmtgDaemon(RDaemon):
             # load the plug-in manager now and search for the plug-ins.
             self.pman = SmtgPluginManager(default_plugin_dirs, 
                                           self.config, 
-                                          self._commrouter)
+                                          self.msg_handler)
             self.pman.collectPlugins()
             self.pman.activatePlugins()
     
@@ -166,7 +151,8 @@ class SmtgDaemon(RDaemon):
     
     
             # starts the comm router running to send messages!!
-            Thread(target=self._commrouter._run).start()
+            Thread(target=self.msg_handler._run,
+                   kwargs={"triggermethod":self.isRunning}).start()
             
             # start the interface thread
             Thread(target=self.__t2).start()
@@ -195,7 +181,7 @@ class SmtgDaemon(RDaemon):
                         if not self.isRunning(): break;
                 except: pass
                 
-            self._commrouter.flush()
+            self.msg_handler.flush()
             self.config.save()
             logging.debug("pull-thread is dead")
 
@@ -219,15 +205,19 @@ class SmtgDaemon(RDaemon):
         
                 # create an interface out of the socket
                 # LATER: authentication can go here, before they connect. (eg logging in)
-                interface = Interface(client_socket)
-                identifier = self._commrouter.register("interface", interface)
+                interface = Interface(self.msg_handler, client_socket)
+                logging.debug("incoming message from interface.")
+                identifier = self.msg_handler.register("interface", interface)
+                logging.debug("identifier: %s"% identifier)
             
                 # since there are abilities that this person can perform
                 # ask for first action, if its not uber-important, throw
                 # to new thread, otherwise execute it.
-                self._commrouter.sendMsg(makeCommandMsg("proceed","",dest=identifier))
-            except: pass #catches a timeout and allows for daemon status checking
-            
+                self.msg_handler.sendMsg(makeCommandMsg("proceed","",dest=identifier))
+                Thread(target=interface._run).start()
+                logging.debug("pushed interface to new thread.")
+            except timeout:pass #catches a timeout and allows for daemon status checking
+            except Exception as e: logging.exception(e)
         TCPSock.close()
         logging.debug("communication-thread is dead")
 

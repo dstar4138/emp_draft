@@ -15,8 +15,11 @@ limitations under the License.
 
 import os
 from configparser import SafeConfigParser
-from smtg.config.defaults import default_configs, default_cfg_files
+from smtg.config.defaults import default_configs, default_cfg_files, writeto_cfg_file
 
+CATEGORY_MAP = {"Feeds":"plugin_",
+                "Signals":"plugin_",
+                "Alerts":"alerter_"}
 
 class SmtgConfigParser(SafeConfigParser):
     """At its heart, this config parser is a SafeConfigParser. The
@@ -52,20 +55,28 @@ class SmtgConfigParser(SafeConfigParser):
         self.VALIDATED = True
         self.read(self.CONFIG_FILES)
         
-            ### ### VALIDATION ### ###
-        #first check logging capabilities.
-        if self.getboolean("Logging","logging-on"):              
-            self.__try_setup_path(self.get("Logging","log-file"))
-            
+            ### ### VALIDATION ### ### 
         #then check if the update speed is valid, must be >= 1 minute
         if self.getfloat("Daemon","update-speed") < 1.0:
             self.set("Daemon","update-speed", 1.0)
+            
+        #first check logging capabilities.
+        if self.getboolean("Logging","logging-on"):              
+            self.__try_setup_path(self.get("Logging","log-file"))
 
 
     def __try_setup_path(self,path):
-        #LATER: check if path exists, if it doesn't the create it safely.
-        pass
-
+        if os.path.exists(path):
+            return os.access(path, os.W_OK)
+        else:
+            try:
+                dirs, _ = os.path.split(path)
+                os.makedirs(os.path.abspath(dirs))
+            except: return False
+            return True
+            
+        
+        
     def getPluginVars(self, plugin_name):
         """A quick function to return the plugin's variables from the 
         configuration files.
@@ -91,8 +102,24 @@ class SmtgConfigParser(SafeConfigParser):
         try: return self.items(alerter_name)
         except: return None
     
+    def defaultAttachmentVars(self, name, defaults, category):
+        """Called by SmtgPluginManager and SmtgAlertManager to load the default
+        configurations into the database for use later.
+        """
+        section = CATEGORY_MAP[category]+name
+        if not self.has_section(section):
+            self.add_section(section)
+
+        for option in defaults.keys():
+            if not self.has_option(section, option):
+                self.set(section, option, defaults[option])
+    
     def save(self):
         """ Save the configurations to the local user's configuration. """
-        pass #TODO: please implement me!
+        if writeto_cfg_file is not None:
+            # make sure it exists and can be written to.
+            if self.__try_setup_path(writeto_cfg_file):
+                self.write(open(writeto_cfg_file, mode="w"))
+            
     
     

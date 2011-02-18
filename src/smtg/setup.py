@@ -14,19 +14,8 @@ limitations under the License.
 """
 
 __version__ = "0.1"
-__description__ = """
-This is the setup script for smtg and smtgd, it uses the configurations,
-to create the logs, config files, and directory structure around the 
-source code which of course you already have.
-"""
-
-#import os
-#import sys
-
-
 
 #
-# XXX do i need this file or not?? it may be crutial later, but currently
-#   distributing the source code, should be sufficiant.
+# Uses python's distutils, etc to create smtg into a python module.
 #
 

@@ -64,10 +64,13 @@ class DaemonServerSocket():
             self.socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
             self.socket.bind(("localhost",self.PORT_NUM))
             self.socket.listen(3) # standard, change if you want.
-            self.socket.settimeout(2) #timeout in 2 seconds...
+            self.socket.settimeout(2) #timeout in 3 seconds...
         else: 
             self.socket = altsocket
-    
+        
+    def __getattr__(self, name):    
+        return getattr(self.socket, name)
+        
     def send(self, msg):
         """Sends a string as a byte sequence to a DaemonClientSocket at the
         other end. This acts as a socket.sendall(msg), so there is no worries
@@ -143,6 +146,9 @@ class DaemonClientSocket():
         self.RECV_LIMIT = 5 #DO NOT CHANGE!!
         self.socket = socket(AF_INET,SOCK_STREAM)
         self.socket.settimeout(0.5)#intentionally very low. DO NOT CHANGE!!
+        
+    def __getattr__(self, name):    
+        return getattr(self.socket, name)
         
     def connect(self):
         """Connects to a currently running daemon on the local system. Make sure
