@@ -12,7 +12,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and 
 limitations under the License. 
 """
-import logging
+#import logging
+#import smtg.daemon.comm.routing as routing
 from smtg.VariablePluginManager import VariablePluginManager
 from smtg.plugin.smtgplugin import LoopPlugin, SignalPlugin
 
@@ -29,9 +30,9 @@ class SmtgPluginManager(VariablePluginManager):
     """The plugin manager for the SMTG daemon.
     """
     
-    def __init__(self, plugin_dirs, cfg_p, commreader):
+    def __init__(self, plugin_dirs, cfg_p):
         """ """
-        VariablePluginManager.__init__( self, cfg_p, commreader,
+        VariablePluginManager.__init__( self, cfg_p,
                                         categories_filter=PLUGIN_CATEGORIES,
                                         directories_list=plugin_dirs,
                                         plugin_info_ext=PLUGIN_EXT )

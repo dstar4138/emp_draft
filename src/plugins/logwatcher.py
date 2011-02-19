@@ -24,7 +24,7 @@ class LogWatcher(FileWatcher):
     better to use the FeedWatcher plug-in).
     """
     
-    def __init__(self, conf, comrouter):
-        FileWatcher.__init__(self, conf, comrouter)
+    def __init__(self, conf):
+        FileWatcher.__init__(self, conf)
         self.change_importance(HIGH_IMPORTANCE)
         logging.debug("logwatcher set to high importance")

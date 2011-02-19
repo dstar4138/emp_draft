@@ -51,8 +51,15 @@ default_configs = {
     # allowed to go, but it can be adjusted to longer than 1 minute.
       "update-speed" : "1.0",
  
-      # only allow local interface connections.
-      "local-only":"true"
+    # only allow local interface connections.
+      "local-only" : "true",
+      
+    # IPs that you don't mind connecting to the daemon, ignored unless 
+    # local-only is false and allow-all is true
+      "whitelisted-ips" : "",
+
+    # Allow all incoming connections to connect to the daemon.      
+      "allow-all" : "false"
     },
 
 #Logging section-
@@ -60,16 +67,16 @@ default_configs = {
 "Logging" :
     {
     # Logging can be turned on and off by the master switch (default to True) 
-     "logging-on":"true",
+     "logging-on" : "true",
 
     # Plugins and the daemon can put more info in logs like a stack traces
-     "debug-mode":"false",
+     "debug-mode" : "false",
 
     # What to log is another matter
-     "log-warnings":"true",
+     "log-warnings" : "true",
 
     # Logging file need to be set as well
-     "log-file":""
+     "log-file" : ""
 
     }
 }

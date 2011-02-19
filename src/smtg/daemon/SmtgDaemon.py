@@ -32,13 +32,13 @@ import logging
 from socket import timeout
 from threading import Thread
 
+import smtg.daemon.comm.routing as routing
 from smtg.plugin.SmtgPluginManager import SmtgPluginManager
 from smtg.config.defaults import default_plugin_dirs
 from smtg.config.logger import setup_logging
 from smtg.config.SmtgConfigParser import SmtgConfigParser
 
 from smtg.daemon.RDaemon import RDaemon
-from smtg.daemon.comm.CommRouter import CommRouter, Interface
 from smtg.daemon.daemonipc import DaemonServerSocket
 from smtg.daemon.comm.messages import makeErrorMsg, makeCommandMsg, makeAlertMsg,  \
                                       makeMsg, strToMessage, COMMAND_MSG_TYPE 
@@ -68,13 +68,8 @@ class SmtgDaemon(RDaemon):
         self.config.validateInternals()
         setup_logging(self.config)
 
-        # create the comm router for internal thread communication.
-        self.msg_handler = CommRouter()
-
         # adjust by the configurations....
         RDaemon.__init__(self, self.config.get("Daemon", "pid-file"),
-                              "daemon", 
-                              self.msg_handler,
                               pchannel=self.config.getint("Daemon", "port"),
                               dprog=dprg,
                               dargs=configfile)
@@ -99,19 +94,18 @@ class SmtgDaemon(RDaemon):
         logging.debug("daemon running with action")
         if action is None or action.getType() != COMMAND_MSG_TYPE:
             logging.debug("daemon thinks action is bad...")
-            self.msg_handler.sendMsg(makeErrorMsg("invalid action",
-                                                  action.getSource()))
+            routing.sendMsg(makeErrorMsg("invalid action", action.getSource()))
             return
             
         logging.debug("Message accepted by daemon, trying to run it now.")
         if action.get("kill"):
             if action.getValue() == "killmenow":
-                self.msg_handler.sendMsg(makeAlertMsg("daemon closing connection", self.ID))
+                routing.sendMsg(makeAlertMsg("daemon closing connection", self.ID))
             elif action.getValue() == "status":
-                self.msg_handler.sendMsg(makeMsg("SMTG-D Running since: "+str(self.start_time),None,action.getSource()))
+                routing.sendMsg(makeMsg("SMTG-D Running since: "+str(self.start_time),None,action.getSource()))
             else:
                 logging.warning("Action %s is not a valid single ability." % action.getValue())
-                self.msg_handler.sendMsg(makeErrorMsg("invalid action",
+                routing.sendMsg(makeErrorMsg("invalid action",
                                                   action.getSource()))
         else:
             # TODO: handle other actions
@@ -141,8 +135,7 @@ class SmtgDaemon(RDaemon):
         try:
             # load the plug-in manager now and search for the plug-ins.
             self.pman = SmtgPluginManager(default_plugin_dirs, 
-                                          self.config, 
-                                          self.msg_handler)
+                                          self.config)
             self.pman.collectPlugins()
             self.pman.activatePlugins()
     
@@ -151,8 +144,9 @@ class SmtgDaemon(RDaemon):
     
     
             # starts the comm router running to send messages!!
-            Thread(target=self.msg_handler._run,
-                   kwargs={"triggermethod":self.isRunning}).start()
+            Thread(target=routing.startRouter,
+                   kwargs={"base":self,
+                           "triggermethod":self.isRunning}).start()
             
             # start the interface thread
             Thread(target=self.__t2).start()
@@ -181,7 +175,7 @@ class SmtgDaemon(RDaemon):
                         if not self.isRunning(): break;
                 except: pass
                 
-            self.msg_handler.flush()
+            routing.flush()
             self.config.save()
             logging.debug("pull-thread is dead")
 
@@ -197,27 +191,30 @@ class SmtgDaemon(RDaemon):
         
         logging.debug("communication-thread started")
         # Create socket and bind to address
-        TCPSock = DaemonServerSocket(portNum=self.getComPort())
+        whitelist = str(self.config.get("Daemon", "whitelisted-ips")).split(",")
+        isocket = DaemonServerSocket(portNum=self.getComPort(),
+                                     ip_whitelist=whitelist,
+                                     externalBlock=self.config.getboolean("Daemon","local-only"),
+                                     allowAll=self.config.getboolean("Daemon", "allow-all"))
         
         while self.isRunning(): # keep listening forever
             try:
-                client_socket = TCPSock.accept()
+                client_socket = isocket.accept()
+                logging.debug("incoming message from interface.")
         
                 # create an interface out of the socket
                 # LATER: authentication can go here, before they connect. (eg logging in)
-                interface = Interface(self.msg_handler, client_socket)
-                logging.debug("incoming message from interface.")
-                identifier = self.msg_handler.register("interface", interface)
-                logging.debug("identifier: %s"% identifier)
+                interface = routing.Interface(client_socket)
+                logging.debug("identifier: %s"% interface.ID)
             
                 # since there are abilities that this person can perform
                 # ask for first action, if its not uber-important, throw
                 # to new thread, otherwise execute it.
-                self.msg_handler.sendMsg(makeCommandMsg("proceed","",dest=identifier))
+                routing.sendMsg(makeCommandMsg("proceed",self.ID, dest=interface.ID))
                 Thread(target=interface._run).start()
                 logging.debug("pushed interface to new thread.")
             except timeout:pass #catches a timeout and allows for daemon status checking
             except Exception as e: logging.exception(e)
-        TCPSock.close()
+        isocket.close()
         logging.debug("communication-thread is dead")
 

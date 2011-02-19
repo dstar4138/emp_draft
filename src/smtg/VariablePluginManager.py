@@ -44,19 +44,16 @@ class SmtgPluginInfo(PluginInfo):
 class VariablePluginManager(FilteredPluginManager):
     """Makes creating a filtered default plugin manager easier"""
     
-    def __init__(self, cfg_p, commreader,categories_filter={"Default":IPlugin}, 
-                                          directories_list=None, 
-                                          plugin_info_ext="yapsy-plugin"):
+    def __init__(self, cfg_p, categories_filter={"Default":IPlugin}, 
+                                directories_list=None, 
+                                plugin_info_ext="yapsy-plugin"):
         """ Creates the base VariablePluginManagaer. """
-        decorated_object = DefaultPluginManager(cfg_p, commreader,
+        decorated_object = DefaultPluginManager(cfg_p,
                                                 categories_filter,
                                                 directories_list,
                                                 plugin_info_ext)
         
-        FilteredPluginManager.__init__(self, decorated_object,
-                                             categories_filter, 
-                                             directories_list,
-                                             plugin_info_ext)
+        FilteredPluginManager.__init__(self, decorated_manager=decorated_object)
         
         
 
@@ -66,14 +63,13 @@ class DefaultPluginManager(PluginManager):
     each plug-in. These variables are read in and can be passed into the plug-in
     by using a dict object. See smtg.plugin.smtgplugin
     """
-    def __init__(self, cfg_p, commreader,
+    def __init__(self, cfg_p, 
                  categories_filter={"Default":IPlugin}, 
                  directories_list=None, 
                  plugin_info_ext="yapsy-plugin"):
         PluginManager.__init__(self, categories_filter, directories_list, plugin_info_ext)
         self.setPluginInfoClass(SmtgPluginInfo)
         self.config = cfg_p
-        self.msg_handler = commreader
     
         
     def loadPlugins(self, callback=None):
@@ -117,8 +113,7 @@ class DefaultPluginManager(PluginManager):
                     if not (candidate_infofile in self._category_file_mapping[current_category]): 
                         # we found a new plugin: initialise it and search for the next one
                         self.config.defaultAttachmentVars(plugin_info.name, plugin_info.defaults, current_category)
-                        plugin_info.plugin_object = element(self.config.getPluginVars(plugin_info.name),
-                                                            self.msg_handler)
+                        plugin_info.plugin_object = element(self.config.getPluginVars(plugin_info.name))
                         plugin_info.category = current_category
                         self.category_mapping[current_category].append(plugin_info)
                         self._category_file_mapping[current_category].append(candidate_infofile)

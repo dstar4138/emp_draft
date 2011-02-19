@@ -24,7 +24,7 @@ __version__="0.6"
 
 
 from yapsy.IPlugin import IPlugin
-from smtg.daemon.comm.CommRouter import Routee
+from smtg.daemon.comm.routing import Routee
 
 # Importance changes its location in the list of updates.
 #   The lower the number the closer to the beginning it is. You can
@@ -42,10 +42,10 @@ class SmtgPlugin(IPlugin, Routee):
     based on those. In ALL plug-ins you must override any method with a
     '_' in front of it. Such as the ones listed below.
     """
-    def __init__(self, conf, comrouter):
+    def __init__(self, conf):
         self.config = conf
         IPlugin.__init__(self)
-        Routee.__init__(self, comrouter)
+        Routee.__init__(self)
         
     def _handle_msg(self, msg):
         """ Inherited from Routee, this is what runs when the Plug-in gets
@@ -76,8 +76,8 @@ class LoopPlugin(SmtgPlugin):
     gets to be pulled in the list of other LoopPlugins.
     """
     
-    def __init__(self, conf, comrouter, importance=MID_IMPORTANCE):
-        SmtgPlugin.__init__(self, conf, comrouter)
+    def __init__(self, conf, importance=MID_IMPORTANCE):
+        SmtgPlugin.__init__(self, conf)
         self.update_importance=importance
 
     def change_importance(self, importance):
@@ -104,8 +104,8 @@ class SignalPlugin(SmtgPlugin):
     to False.
     """
     
-    def __init__(self, conf, comrouter, auto_start=True):
-        SmtgPlugin.__init__(self, conf, comrouter)
+    def __init__(self, conf, auto_start=True):
+        SmtgPlugin.__init__(self, conf)
         self.start=auto_start
 
 

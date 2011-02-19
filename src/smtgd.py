@@ -96,18 +96,13 @@ def main():
                     logging.debug("smtgd got back: %s"%msg)
                     if msg.getValue() == "proceed":# it connected
                         myId= msg.getDestination()
-                        socket.send(makeCommandMsg("status",source=myId, kill=True))
-                        while 1:
-                            msg = socket.recv()
-                            if not msg: continue
-                            else: 
-                                print(strToMessage(msg).getValue(),"\n")
-                                break
+                        socket.send(makeCommandMsg("status", source=myId, kill=True))
+                        print(strToMessage(socket.recv()).getValue(),"\n")
                         socket.close()
                     else: print("ERROR: Daemon rejected connection attempt.")
                 else: print("ERROR: Daemon is not running.")
             except Exception as e:
-                print("ERROR: couldn't communicate with daemon: "+str(e))
+                print("ERROR: couldn't communicate with daemon:", e)
                 
         # The process has been called via a background thread so 
         # it is ok to just run the daemon, we are one!!

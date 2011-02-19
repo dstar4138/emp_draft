@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License. 
 """
 import logging
+import smtg.daemon.comm.routing as routing
 from smtg.daemon.comm.messages import makeMsg, makeErrorMsg, COMMAND_MSG_TYPE
 from smtg.plugin.smtgplugin import LoopPlugin
 
@@ -28,15 +29,15 @@ class FileWatcher(LoopPlugin):
     or stored in anyway. This can change if you want to write a more advanced
     FileWatcher class.
     """
-    def __init__(self, conf, comrouter):
-        LoopPlugin.__init__(self, conf, comrouter)
-        self._files = [] # the internal files to watch.
+    def __init__(self, conf):
+        LoopPlugin.__init__(self, conf)
+        self._files = [] #self.config["files"].split(",") # the internal files to watch.
         self._commands =["help","update","status","files","add","rm"]
     
     def _handle_msg(self, msg):
         if msg is dict: # normally you shouldn't need to run this check
             if msg.get("message") == COMMAND_MSG_TYPE:
-                self._msg_handler.sendMsg(self._runcmds(self, msg))
+                routing.sendMsg(self._runcmds(self, msg))
         else: pass
     
     

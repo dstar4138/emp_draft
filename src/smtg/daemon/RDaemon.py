@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License. 
 """
 import sys
-from smtg.daemon.comm.CommRouter import Routee
+from smtg.daemon.comm.routing import Routee
 from smtg.daemon.daemon import Daemon
 
 class RDaemon(Daemon, Routee):
@@ -21,9 +21,9 @@ class RDaemon(Daemon, Routee):
     implementation. I didn't want people to have to remove or change the
     daemon code to create their own projects without internal CommRouters.
     """
-    def __init__(self, pidfile, thename, commrouter, 
+    def __init__(self, pidfile,
                  pchannel=8080, dprog=sys.argv[0], 
                  dargs="", daemonizerArg="-d", daemonizingCommand=None):
         """ Create a RDaemon, which is a daemon, that is also a Routee. """
         Daemon.__init__(self, pidfile, pchannel, dprog, dargs, daemonizerArg, daemonizingCommand)
-        Routee.__init__(self, commrouter, name=thename) 
+        Routee.__init__(self, name="daemon")

@@ -21,7 +21,7 @@ limitations under the License.
 __version__ = "0.5"
 
 
-from socket import socket, AF_INET, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR
+from socket import socket, AF_INET, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR, SHUT_RDWR
 
 
 class DaemonSocketError(Exception):
@@ -50,7 +50,8 @@ class DaemonServerSocket():
     """
 
     def __init__(self, portNum=8080, bufferSize=4096, encoding="utf-8", 
-                 altsocket=None, ip_whitelist=[], externalBlock=True):
+                 altsocket=None, ip_whitelist=[], externalBlock=True, 
+                 allowAll=False):
         """ Sets up an internal socket on the server side and auto binds to 
         the given port number.
         """
@@ -59,6 +60,7 @@ class DaemonServerSocket():
         self.ENCODING = encoding
         self.WHITE_LIST = ip_whitelist
         self.LOCAL_ONLY = externalBlock
+        self.ALLOW_ALL = allowAll
         if altsocket == None:
             self.socket = socket(AF_INET,SOCK_STREAM)
             self.socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
@@ -116,19 +118,24 @@ class DaemonServerSocket():
         not local, it will either force close the connection or (if user-set) 
         accept it anyways.
         """
+        possible_addrs = ['127.0.0.1', 'localhost']
         
-        possible_addrs = ['127.0.0.1', 'localhost'] + self.WHITE_LIST
+        if not self.LOCAL_ONLY:
+            possible_addrs += self.WHITE_LIST
         
         while True:
-            client_socket, (addr, _) = self.socket.accept()
+            client_socket, (addr, port) = self.socket.accept()
             
-            if addr in possible_addrs or not self.LOCAL_ONLY:
-                return DaemonServerSocket(portNum=self.PORT_NUM, 
+            if self.ALLOW_ALL or addr in possible_addrs:
+                return DaemonServerSocket(portNum=port, 
                                           bufferSize=self.BUFFER_SIZE,
                                           encoding=self.ENCODING,
                                           altsocket=client_socket)
             # otherwise close
             self.socket.close()
+            
+    def shutdown(self):
+        self.socket.shutdown(SHUT_RDWR)
    
         
 class DaemonClientSocket():
@@ -174,7 +181,7 @@ class DaemonClientSocket():
         except Exception as e:
             raise DaemonSocketError(e)    
         
-    def recv(self):
+    def _recv(self):
         """Receives a string as a byte sequence from a DaemonServerSocket at
         the other end. This acts like a loop receiving everything in the network
         buffer before returning. To protect from buffer overflow it has a set
@@ -193,6 +200,21 @@ class DaemonClientSocket():
         except: pass        
         finally:
             return msg.decode(self.ENCODING)
+        
+    def recv(self, block=True,blockout=10):
+        """"""
+        if not block:
+            return self._recv()
+        else:
+            count=0
+            msg = ""
+            while count<blockout:
+                msg = self._recv()
+                if not msg:
+                    count+=1
+                    continue
+                else:break
+            return msg
     
     def close(self):
         """Closes the current connection with the Daemon."""
