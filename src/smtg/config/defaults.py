@@ -83,6 +83,7 @@ default_configs = {
 
 default_cfg_files = []
 default_plugin_dirs = []
+default_alerter_dirs = []
 
 # this is the file that the config parser will write to when its closing.
 writeto_cfg_file = None
@@ -106,6 +107,10 @@ if CUR_PLATFORM.find("linux")!=-1:    #linux systems.
     default_plugin_dirs.append(os.path.expanduser("~/.smtg/plugins"))
     default_plugin_dirs.append("plugins") # look in the local src/plugins directory too
 
+
+    default_alerter_dirs.append("/etc/smtg/alerters")
+    default_alerter_dirs.append(os.path.expanduser("~/.smtg/alerters"))
+    default_alerter_dirs.append("alerters") # look in the local src/alerters directory too
 
 elif CUR_PLATFORM.find("win32")!=-1:  # Windows systems.
     pass

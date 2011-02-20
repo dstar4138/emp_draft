@@ -33,15 +33,17 @@ from socket import timeout
 from threading import Thread
 
 import smtg.daemon.comm.routing as routing
+from smtg.alert.SmtgAlertManager import SmtgAlertManager
 from smtg.plugin.SmtgPluginManager import SmtgPluginManager
-from smtg.config.defaults import default_plugin_dirs
+from smtg.config.defaults import default_plugin_dirs, default_alerter_dirs
 from smtg.config.logger import setup_logging
 from smtg.config.SmtgConfigParser import SmtgConfigParser
 
 from smtg.daemon.RDaemon import RDaemon
 from smtg.daemon.daemonipc import DaemonServerSocket
-from smtg.daemon.comm.messages import makeErrorMsg, makeCommandMsg, makeAlertMsg,  \
-                                      makeMsg, strToMessage, COMMAND_MSG_TYPE 
+from smtg.daemon.comm.messages import makeErrorMsg, makeCommandMsg,  \
+                                      makeMsg, strToMessage, COMMAND_MSG_TYPE,  \
+                                      ERROR_MSG_TYPE 
 
 
 class SmtgDaemon(RDaemon):
@@ -74,8 +76,6 @@ class SmtgDaemon(RDaemon):
                               dprog=dprg,
                               dargs=configfile)
          
-
-
     def restart(self):
         """ Restarts the daemon by killing both threads, and making sure their
         both down before trying to run the daemon again.
@@ -85,33 +85,57 @@ class SmtgDaemon(RDaemon):
             time.sleep(6)
         except: pass
         self.start()
-           
-  
+
+    
     def _handle_msg(self, msg):
         """ Handles the incoming messages passed to it from the CommReader. """
         logging.debug("daemon received: %s" % msg)
         action = strToMessage(msg)
-        logging.debug("daemon running with action")
-        if action is None or action.getType() != COMMAND_MSG_TYPE:
-            logging.debug("daemon thinks action is bad...")
-            routing.sendMsg(makeErrorMsg("invalid action", action.getSource()))
-            return
+        if action is None:pass # the action is invalid, just skip
+        elif action.getType() == COMMAND_MSG_TYPE:
+            logging.debug("Daemon trying to run command now.")
+            source = None # this can either be self.ID or None since its the daemon.
+            dest = action.getSource() # the destination is the person we got the msg from
+            if action.getValue() == "status":
+                routing.sendMsg(makeMsg("SMTG-D Running since: "+
+                                        str(self.start_time),source,dest))
+            elif action.getValue() == "cmds":
+                routing.sendMsg(makeMsg(["status","plugins","cmds",
+                                         "alerters","plugid","alertid"],
+                                source,dest))
+                
+            elif action.getValue() == "plugins":
+                routing.sendMsg(makeMsg(self.pman.getPluginNames(),source,dest))
+            elif action.getValue() == "alerters":
+                routing.sendMsg(makeMsg(self.aman.getAlerterNames(),source,dest))
+            elif action.getValue() == "plugid":
+                try:
+                    result = self.pman.getPluginID(action.get("args")[0])
+                    if result is not None:
+                        routing.sendMsg(makeErrorMsg("name does not exist.",None,dest))
+                    else:routing.sendMsg(makeMsg(result,source,dest))
+                except:
+                    routing.sendMsg(makeErrorMsg("plugid needs an argument.",None,dest))
+            elif action.getValue() == "alertid":
+                try:
+                    result = self.aman.getAlerterID(action.get("args")[0])
+                    if result is not None:
+                        routing.sendMsg(makeErrorMsg("name does not exist.",None,dest))
+                    else:routing.sendMsg(makeMsg(result,source,dest))
+                except:
+                    routing.sendMsg(makeErrorMsg("alertid needs an argument.",None,dest))
+                
+            elif action.getValue() == "var":
+                pass
             
-        logging.debug("Message accepted by daemon, trying to run it now.")
-        if action.get("kill"):
-            if action.getValue() == "killmenow":
-                routing.sendMsg(makeAlertMsg("daemon closing connection", self.ID))
-            elif action.getValue() == "status":
-                routing.sendMsg(makeMsg("SMTG-D Running since: "+str(self.start_time),None,action.getSource()))
-            else:
-                logging.warning("Action %s is not a valid single ability." % action.getValue())
-                routing.sendMsg(makeErrorMsg("invalid action",
-                                                  action.getSource()))
-        else:
-            # TODO: handle other actions
-            pass
+            # the command does not exist.
+            else: routing.sendMsg(makeErrorMsg("invalid action",source,dest))
+        elif action.getType() == ERROR_MSG_TYPE:
+            # the daemon will log your error for you!
+            logging.error("error from %s: %s" % (action.getSource(), action.getValue()))
+        # the message is invalid, send the error back.
+        else: routing.sendMsg(makeErrorMsg("invalid message", None, action.getSource()))
   
-
     def _run(self):
         """ Starts the three threads that make up the internals of the daemon
         and creates both the AlertManager and the PluginManager for them to pull
@@ -139,9 +163,11 @@ class SmtgDaemon(RDaemon):
             self.pman.collectPlugins()
             self.pman.activatePlugins()
     
-    
-            #TODO: start AlertManager and collect/activate alerters
-    
+            # start AlertManager and collect/activate alerters
+            self.aman = SmtgAlertManager(default_alerter_dirs,
+                                         self.config)
+            self.aman.collectPlugins()
+            self.aman.activatePlugins()
     
             # starts the comm router running to send messages!!
             Thread(target=routing.startRouter,
@@ -176,7 +202,8 @@ class SmtgDaemon(RDaemon):
                 except: pass
                 
             routing.flush()
-            self.config.save()
+            self.config.save( self.pman.getAllPlugins(), 
+                              self.aman.getAllPlugins() )
             logging.debug("pull-thread is dead")
 
         except Exception as e:

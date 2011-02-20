@@ -42,7 +42,7 @@ class SmtgPluginInfo(PluginInfo):
 
 
 class VariablePluginManager(FilteredPluginManager):
-    """Makes creating a filtered default plugin manager easier"""
+    """Makes creating a filtered default plug-in manager easier"""
     
     def __init__(self, cfg_p, categories_filter={"Default":IPlugin}, 
                                 directories_list=None, 

@@ -17,13 +17,56 @@ from smtg.alert.smtgalert import Alerter
 from smtg.VariablePluginManager import VariablePluginManager
 
 # this is the default alert descriptor extention. See yapsy.PluginInfo
-ALERT_EXT = "smtg-alert"
+ALERTER_EXT = "smtg-alerter"
 
 # this is the default alert categories
-ALERT_CATEGORIES = {"Default": Alerter}
+ALERTER_CATEGORIES = {"Alerts": Alerter}
 
 class SmtgAlertManager(VariablePluginManager):
     """ Handles alerters as similarly to how plug-ins work. """
     
-    def __init__(self):
-        pass
+    def __init__(self,alrtdirs,conf):
+        VariablePluginManager.__init__( self, conf,
+                                        categories_filter=ALERTER_CATEGORIES,
+                                        directories_list=alrtdirs,
+                                        plugin_info_ext=ALERTER_EXT )
+    def isPluginOk(self, info): 
+        """Inhereted from FilteredPluginManager, used to tell whether or
+        not an alert is ok to load. This relies on whether the configuration
+        says its ok to autoload."""
+        return True #FIXME: fix how the alerts are installed
+        
+        
+    def activatePlugins(self):
+        """Activates all the valid LoopPlugins, and any SignalPlugins that 
+        require an auto-start.
+        """
+        #TODO: implement SmtgPluginManager.activatePlugins() to handle config files and alert plugins...
+        # right now i'll just activate everything.
+        alerts = self.getAllPlugins()
+        for alert in alerts:
+            alert.plugin_object.activate()
+            
+           
+    def getAlerterNames(self):
+        """ Get all the names of the plug-ins."""
+        names = []
+        for alerter in self.getAllPlugins():
+            names.append(alerter.name)
+        return names
+            
+    def getAlerterIDs(self):
+        """ Get all the alerters IDs."""
+        ids = []
+        for alerter in self.getAllPlugins():
+            ids.append(alerter.plugin_object.ID)
+        return ids
+    
+    def getAlerterID(self, name):
+        """ Get the alerter's ID given a plug-in's name. """
+        for alerter in self.getAllPlugins():
+            if name == alerter.name:
+                return alerter.plugin_object.ID
+        return None
+    
+    

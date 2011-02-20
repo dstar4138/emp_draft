@@ -13,16 +13,16 @@ See the License for the specific language governing permissions and
 limitations under the License. 
 """
 
-from yapsy.IPlugin import IPlugin
-from smtg.daemon.comm.CommRouter import Routee
+from smtg.plugin.smtgplugin import SmtgPlugin
 
-class Alerter(IPlugin, Routee):
+class Alerter(SmtgPlugin):
     """This is the base method of alerting. """
-    def __init__(self, args):
+    
+    def __init__(self, conf, name):
         """ Create the foundation of an alert with a dictionary of internal 
         variables, passed to it via the daemon/AlertManager.
         """
-        self._args = args
+        SmtgPlugin.__init__(self, conf, name)
     
     def _handle_msg(self, msg):
         """ Inherited from Routee, this is what runs when the Plug-in gets

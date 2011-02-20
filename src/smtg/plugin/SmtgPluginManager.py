@@ -27,18 +27,28 @@ PLUGIN_CATEGORIES = {"Feeds": LoopPlugin,
 
 
 class SmtgPluginManager(VariablePluginManager):
-    """The plugin manager for the SMTG daemon.
+    """The plug-in manager for the SMTG daemon, This is never directly 
+    accessed by the users, only through the daemon itself. If config variables
+    need to be changed, access the daemon and ask it to change it. If a plug-in
+    variable needs to be changed, then ask the plug-in. 
     """
     
     def __init__(self, plugin_dirs, cfg_p):
-        """ """
+        """Create the Plug-in Manager for SMTG."""
         VariablePluginManager.__init__( self, cfg_p,
                                         categories_filter=PLUGIN_CATEGORIES,
                                         directories_list=plugin_dirs,
                                         plugin_info_ext=PLUGIN_EXT )
-        
-        
-          
+
+
+    def isPluginOk(self, info):
+        """ Don't load the plug-in if there's a variable called 'daemon-load'
+        in the plug-ins variable section and its set to false.
+        """ 
+        try: return bool(info.defaults.get("daemon-load",True))
+        except: return True
+
+
     def activatePlugins(self):
         """Activates all the valid LoopPlugins, and any SignalPlugins that 
         require an auto-start.
@@ -50,23 +60,36 @@ class SmtgPluginManager(VariablePluginManager):
             plug.plugin_object.activate()
         
     def getLoopPlugins(self):
-        """ Run all the feed plugin's pull loops. """
-        b = sorted( self.getPluginsOfCategory("Feeds"),
-                       key=lambda x: x.plugin_object.update_importance)
-        return b
-        
-    def printlist(self,list):
-        for feed in list:
-            print("\t(",feed.name,",",feed.plugin_object.update_importance,")")
-    
-    def runCommand(self,plugin_name,cmd):
-        """ Search for the plugin with the name given and send the 
-        command to it, then return the result as a message (see iAPI). 
+        """ Get all the loop plug-ins that are loaded. This is used in the pull
+        loop thread for updating all of them. 
         """
-        pass
+        return sorted( self.getPluginsOfCategory("Feeds"),
+                       key=lambda x: x.plugin_object.update_importance)
+
+
+    def getSignalPlugins(self):
+        """ Utility function for getting all the signal plugins. """
+        return sorted( self.getPluginsOfCategory("Signals"),
+                       key=lambda x: x.plugin_object.update_importance)
+
+    def getPluginNames(self):
+        """ Get all the names of the plug-ins."""
+        names = []
+        for plugin in self.getAllPlugins():
+            names.append(plugin.name)
+        return names
     
-    #XXX: does this method need to be here? an we send commands to the plugin manager?
-    def runAlertThread(self, plugin_name):pass
+    def getPluginIDs(self):
+        """ Get all the plug-ins IDs."""
+        ids = []
+        for plugin in self.getAllPlugins():
+            ids.append(plugin.plugin_object.ID)
+        return ids
     
-    # TODO: define the filtering method
-    # def isPluginOk(self, info): return True
+    def getPluginID(self, name):
+        """ Get the plug-in ID given a plug-in's name. """
+        for plugin in self.getAllPlugins():
+            if name == plugin.name:
+                return plugin.plugin_object.ID
+        return None
+

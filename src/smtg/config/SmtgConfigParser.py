@@ -55,7 +55,7 @@ class SmtgConfigParser(SafeConfigParser):
         self.VALIDATED = True
         self.read(self.CONFIG_FILES)
         
-            ### ### VALIDATION ### ### 
+        ### ### VALIDATION ### ### 
         #then check if the update speed is valid, must be >= 1 minute
         if self.getfloat("Daemon","update-speed") < 1.0:
             self.set("Daemon","update-speed", 1.0)
@@ -114,9 +114,31 @@ class SmtgConfigParser(SafeConfigParser):
             if not self.has_option(section, option):
                 self.set(section, option, defaults[option])
     
-    def save(self):
+    def save(self, plugins, alerters):
         """ Save the configurations to the local user's configuration. """
         if writeto_cfg_file is not None:
+            # update the plug-in variables before saving.
+            for plugin in plugins:
+                try:
+                    for key,value in plugin.plugin_object.config:
+                        self.set("plugin_"+plugin.name,key,value)
+                        
+                    if hasattr(plugin.plugin_object, "autostart"): #its a SignalPlugin
+                        self.set("plugin_"+plugin.name,
+                                 "autostart",plugin.plugin_object.autostart)
+                    elif hasattr(plugin.plugin_object,"update_importance"):
+                        self.set("plugin_"+plugin.name,
+                                 "importance",plugin.plugin_object.update_importance)
+                    #else, it doesn't matter 
+                except: pass 
+            
+            # update the alerter variables before saving.
+            for alerter in alerters:
+                try:
+                    for key,value in alerter.plugin_object.config:
+                        self.set("alerter_"+alerter.name, key, value)
+                except: pass 
+            
             # make sure it exists and can be written to.
             if self.__try_setup_path(writeto_cfg_file):
                 self.write(open(writeto_cfg_file, mode="w"))

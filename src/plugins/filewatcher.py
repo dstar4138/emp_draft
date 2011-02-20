@@ -29,8 +29,8 @@ class FileWatcher(LoopPlugin):
     or stored in anyway. This can change if you want to write a more advanced
     FileWatcher class.
     """
-    def __init__(self, conf):
-        LoopPlugin.__init__(self, conf)
+    def __init__(self, conf, name="File Watcher"):
+        LoopPlugin.__init__(self, conf, name)
         self._files = [] #self.config["files"].split(",") # the internal files to watch.
         self._commands =["help","update","status","files","add","rm"]
     

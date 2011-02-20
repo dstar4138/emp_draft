@@ -25,6 +25,6 @@ class LogWatcher(FileWatcher):
     """
     
     def __init__(self, conf):
-        FileWatcher.__init__(self, conf)
+        FileWatcher.__init__(self, conf, name="Log Watcher")
         self.change_importance(HIGH_IMPORTANCE)
         logging.debug("logwatcher set to high importance")

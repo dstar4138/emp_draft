@@ -20,7 +20,7 @@ limitations under the License.
 #  your program. Please consult this page for more information:
 #    http://wiki.python.org/moin/IntegratingPythonWithOtherLanguages
 #
-__version__="0.6"
+__version__="0.7"
 
 
 from yapsy.IPlugin import IPlugin
@@ -42,10 +42,10 @@ class SmtgPlugin(IPlugin, Routee):
     based on those. In ALL plug-ins you must override any method with a
     '_' in front of it. Such as the ones listed below.
     """
-    def __init__(self, conf):
+    def __init__(self, conf, name):
         self.config = conf
         IPlugin.__init__(self)
-        Routee.__init__(self)
+        Routee.__init__(self, name)
         
     def _handle_msg(self, msg):
         """ Inherited from Routee, this is what runs when the Plug-in gets
@@ -53,7 +53,7 @@ class SmtgPlugin(IPlugin, Routee):
         NEED to implement it.
         """
         raise NotImplementedError("_handle_msg() not implemented")
-        
+
     def _check_status(self):
         """Checks the status of the plug-in. This may mean to check if a 
         web-site is down, or if the connection is lost. Should return a 
@@ -75,10 +75,13 @@ class LoopPlugin(SmtgPlugin):
     a regular interval. The importance of the LoopPlugin decides when it
     gets to be pulled in the list of other LoopPlugins.
     """
-    
-    def __init__(self, conf, importance=MID_IMPORTANCE):
-        SmtgPlugin.__init__(self, conf)
-        self.update_importance=importance
+    def __init__(self, conf, name, importance=MID_IMPORTANCE):
+        SmtgPlugin.__init__(self, conf, name)
+        self.update_importance = importance
+        for key,value in self.config:
+            if key == "importance":
+                self.update_importance=value
+                break
 
     def change_importance(self, importance):
         if importance <= HIGH_IMPORTANCE or importance >= LOW_IMPORTANCE:  
@@ -90,7 +93,7 @@ class LoopPlugin(SmtgPlugin):
         """
         raise NotImplementedError("_update() not implemented") 
 
-            
+
 class SignalPlugin(SmtgPlugin): 
     """The SignalPlugin type waits for a message rather than pulling on 
     an interval like the LoopPlugin. These are necessary for high 
@@ -103,11 +106,13 @@ class SignalPlugin(SmtgPlugin):
     until it's hand-launched by the user. To do this: set auto_start
     to False.
     """
-    
-    def __init__(self, conf, auto_start=True):
+    def __init__(self, conf, name, auto_start=False):
         SmtgPlugin.__init__(self, conf)
-        self.start=auto_start
-
+        self.autostart = auto_start
+        for key,value in self.config:
+            if key == "autostart":
+                self.autostart=value
+                break
 
     def _run(self, *args):
         """Signal Plug-ins get their own threads! This is the method that

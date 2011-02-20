@@ -16,4 +16,15 @@ limitations under the License.
 from smtg.alert.smtgalert import Alerter
 
 class EmailAlerter(Alerter):
-    pass #TODO: write an email alerter.
+    """ Sends an email upon getting an Alert."""
+    
+    def __init__(self, conf):
+        """Sets up the alerter."""
+        Alerter.__init__(self,conf,"Email Alerter")
+        
+    def _handle_msg(self, msg):
+        """ """
+        pass
+    
+    def _alert(self, args):
+        pass

@@ -96,7 +96,7 @@ def main():
                     logging.debug("smtgd got back: %s"%msg)
                     if msg.getValue() == "proceed":# it connected
                         myId= msg.getDestination()
-                        socket.send(makeCommandMsg("status", source=myId, kill=True))
+                        socket.send(makeCommandMsg("status", myId))
                         print(strToMessage(socket.recv()).getValue(),"\n")
                         socket.close()
                     else: print("ERROR: Daemon rejected connection attempt.")
