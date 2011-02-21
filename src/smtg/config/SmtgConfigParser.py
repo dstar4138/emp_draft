@@ -30,7 +30,6 @@ class SmtgConfigParser(SafeConfigParser):
 
     def __init__(self, configfile=None):
         """ Check the config file and include the defaults. """
-        self.VALIDATED = False
         self.CONFIG_FILES = default_cfg_files
 
         if configfile is not None:
@@ -50,9 +49,6 @@ class SmtgConfigParser(SafeConfigParser):
         """ Check all the values you are overwriting from the config 
         file. 
         """
-        if self.VALIDATED: return
-
-        self.VALIDATED = True
         self.read(self.CONFIG_FILES)
         
         ### ### VALIDATION ### ### 

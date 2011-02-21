@@ -119,10 +119,6 @@ elif CUR_PLATFORM.find("darwin")!=-1: # Mac OSX
 else:  # the poor souls not using one of the above. :(
     logging.warning("Could not determine current operating system.")
 
-
-#XXX: REMOVE ME LATER
-default_configs["Logging"]["debug-mode"]="true"
-
 ############## ALT MAIN TO TEST ######################
 #if __name__ == "__main__":
 #    print("Your os is: ", CUR_PLATFORM)

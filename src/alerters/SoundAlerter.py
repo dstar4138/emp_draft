@@ -15,8 +15,10 @@ limitations under the License.
 
 from smtg.alert.smtgalert import Alerter
 
-class EmailAlerter(Alerter):
-    """ Sends an email upon getting an Alert."""
+class SoundAlerter(Alerter):
+    """ Plays a sound when it gets an alert. Only really works if 
+    its on the local machine and it has speakers... Duh
+    """
     
     def __init__(self, conf, name="Email Alerter"):
         """Sets up the alerter."""

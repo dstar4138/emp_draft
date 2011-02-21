@@ -25,6 +25,7 @@ ALERT_MSG_TYPE   = "alrt"
 MSG_TYPES = [ERROR_MSG_TYPE, COMMAND_MSG_TYPE, BASE_MSG_TYPE, ALERT_MSG_TYPE]
 
 
+
 def strToMessage(s):
     """ Converts a string into a Message object. Handy way of using this is to
     wrap the incoming string from a DaemonSocket. Make sure the protocol you 
@@ -51,7 +52,7 @@ def strToMessage(s):
         return None
 
 
-def makeMsg(value, source, dest=None):
+def makeMsg(value, source, dest):
     """ Utility method for quickly creating a base message."""
     return Message({"message":BASE_MSG_TYPE,
                     "source":source,

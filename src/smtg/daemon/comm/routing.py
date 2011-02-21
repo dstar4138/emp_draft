@@ -17,7 +17,7 @@ import queue
 import random
 import logging
 from threading import Thread
-from smtg.daemon.comm.messages import strToMessage, ALERT_MSG_TYPE
+from smtg.daemon.comm.messages import strToMessage, makeMsg, ALERT_MSG_TYPE
 
 
 _msg_queue = queue.Queue()
@@ -40,13 +40,31 @@ def isRegisteredByID(id):
     return (id in list(_registration.keys()))
         
 
-def isRegisteredByName(name): #remove?
+def isRegisteredByName(name):
     """ Checks if the name is registered, returns the id or False if otherwise 
     not registered.
     """
     for n,_ in list(_registration.values()):
         if name == n: return True
     return False
+
+def getReferenceByID(id):
+    """ Get the reference to the routee given the id."""
+    _,ref = _registration.get(id, (None,None))
+    return ref  
+
+def getReferenceByName(name):
+    """ Get the reference to the routee given the name."""
+    for n,ref in list(_registration.values()):
+        if name == n: return ref
+    return None
+
+def getIDByName(name):
+    for id in list(_registration.keys()):
+        n,_ = _registration.get(id, (None,None))
+        logging.debug("n=%s, name=%s" %(n,name))
+        if n == name: return id
+    return None
 
 def deregister(id):
     """ Removes a Routee from the registry. """
@@ -72,6 +90,7 @@ def flush():
             id,(_,routee) = _registration.popitem()
             if isinstance(routee, Interface):
                 logging.debug("found interface that im deregistering") 
+                routee._handle_msg(makeMsg("shutting-down",None,id))
                 routee.close()
             logging.debug("deregistered: %s"%id)
 
@@ -82,6 +101,9 @@ def startRouter(base=None, triggermethod=lambda:False):
         try:
             if _msg_queue.empty():raise queue.Empty
             msg = _msg_queue.get() #remove and return a message
+            
+            if isinstance(msg, str): msg = strToMessage(msg)
+            elif msg is None: continue
             
             # If the destination is registered, then send it
             logging.debug("registered: %s"%str(list(_registration.keys())))
@@ -98,9 +120,10 @@ def startRouter(base=None, triggermethod=lambda:False):
                 # Check if the message type is an alert, if it is, then send it
                 # to EVERYONE! 
                 if msg.getType() == ALERT_MSG_TYPE:
-                    for name, routee in _registration.values():
-                        logging.debug("sending message to %s: %s"% (name, msg))
-                        Thread(target=routee._handle_msg, args=(msg,)).start()
+                    for id in list( _registration.keys()):
+                        logging.debug("sending message to %s: %s"% (id, msg))
+                        _,ref = _registration.get(id)
+                        Thread(target=ref._handle_msg, args=(msg,)).start()
                         
                 # if not send it to the daemon to handle.
                 else:
@@ -108,7 +131,7 @@ def startRouter(base=None, triggermethod=lambda:False):
                         logging.debug("sending message to daemon: %s" % msg) 
                         Thread(target=base._handle_msg,args=(msg,)).start()
                     else:
-                        logging.debug("should have sent the message to the daemon")
+                        logging.debug("should have sent the message to the base handler")
                         
             # if we dont know how to handle the message, log and discard it. oh well.
             else:
@@ -136,9 +159,10 @@ def startRouter(base=None, triggermethod=lambda:False):
 class Routee():
     """ Base object for every internal possibility for communication 
     Within SMTG,"""
-    def __init__(self, name="blank"):#FIXME: find another way of getting name? Do we even need it?
+    def __init__(self, name):
         """ Create the Routee object and register it with a Router."""
         self.ID = register(name, self)
+        self.NAME = name
         
     def _handle_msg(self, msg):
         """Called by the router, this is what handles the message directed at 
@@ -155,7 +179,7 @@ class Interface(Routee):
         """ Create an Interface using a socket. Assumes that it is of the
         type DaemonServerSocket.
         """
-        Routee.__init__(self)
+        Routee.__init__(self, "interface")
         self._socket = socket
         
     def _handle_msg(self, msg):
@@ -172,9 +196,7 @@ class Interface(Routee):
             while 1:
                 msg = self._socket.recv()
                 if not msg: break
-                else:
-                    tmp=strToMessage(msg)
-                    sendMsg(tmp)
+                else: sendMsg(strToMessage(msg))
         except Exception as e: 
             logging.error("interface died because: %s"%e)
         finally:

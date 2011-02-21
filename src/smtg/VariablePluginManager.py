@@ -113,7 +113,7 @@ class DefaultPluginManager(PluginManager):
                     if not (candidate_infofile in self._category_file_mapping[current_category]): 
                         # we found a new plugin: initialise it and search for the next one
                         self.config.defaultAttachmentVars(plugin_info.name, plugin_info.defaults, current_category)
-                        plugin_info.plugin_object = element(self.config.getPluginVars(plugin_info.name))
+                        plugin_info.plugin_object = element(self.config.getPluginVars(plugin_info.name),plugin_info.name)
                         plugin_info.category = current_category
                         self.category_mapping[current_category].append(plugin_info)
                         self._category_file_mapping[current_category].append(candidate_infofile)

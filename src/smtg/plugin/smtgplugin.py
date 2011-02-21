@@ -57,7 +57,8 @@ class SmtgPlugin(IPlugin, Routee):
     def _check_status(self):
         """Checks the status of the plug-in. This may mean to check if a 
         web-site is down, or if the connection is lost. Should return a 
-        JSON Base Message as described by the API.
+        boolean. True means that the plug-in means that it is running,
+        False if otherwise. 
         """
         raise NotImplementedError("_check_status() not implemented")  
         
@@ -84,7 +85,7 @@ class LoopPlugin(SmtgPlugin):
                 break
 
     def change_importance(self, importance):
-        if importance <= HIGH_IMPORTANCE or importance >= LOW_IMPORTANCE:  
+        if importance <= HIGH_IMPORTANCE and importance >= LOW_IMPORTANCE:  
             self.update_importance = importance
        
     def _update(self, *args):

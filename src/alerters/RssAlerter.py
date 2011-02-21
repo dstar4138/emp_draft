@@ -12,13 +12,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and 
 limitations under the License. 
 """
-
 from smtg.alert.smtgalert import Alerter
 
-class EmailAlerter(Alerter):
-    """ Sends an email upon getting an Alert."""
+class RSSAlerter(Alerter):
+    """ Updates a file when an alert happens. This will work well with conky."""
     
-    def __init__(self, conf, name="Email Alerter"):
+    def __init__(self, conf, name="File Alerter"):
         """Sets up the alerter."""
         Alerter.__init__(self,conf, name)
         

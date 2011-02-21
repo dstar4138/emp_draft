@@ -62,8 +62,9 @@ class SmtgDaemon(RDaemon):
         """Load the configuration files, create the CommRouter, and then create 
         the daemon. 
         """
-        # get yourself a counter!
+        # get yourself a timer!
         self.start_time=time.time() 
+        self.fm_start_time = time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime(self.start_time))
 
         # now set up the internal configuration via a config file.
         self.config=SmtgConfigParser(configfile)
@@ -76,14 +77,21 @@ class SmtgDaemon(RDaemon):
                               dprog=dprg,
                               dargs=configfile)
          
+    def stop(self):
+        """ Stops the daemon but then waits a while to make sure all the threads are done. """
+        try: 
+            RDaemon.stop(self)
+            time.sleep(3)#dont worry about the magic number
+        except: pass
+         
     def restart(self):
         """ Restarts the daemon by killing both threads, and making sure their
         both down before trying to run the daemon again.
         """
-        try: 
+        try:
             self.stop()
-            time.sleep(6)
-        except: pass
+            time.sleep(2)#dont worry about the magic number
+        except:pass
         self.start()
 
     
@@ -97,11 +105,10 @@ class SmtgDaemon(RDaemon):
             source = None # this can either be self.ID or None since its the daemon.
             dest = action.getSource() # the destination is the person we got the msg from
             if action.getValue() == "status":
-                routing.sendMsg(makeMsg("SMTG-D Running since: "+
-                                        str(self.start_time),source,dest))
+                routing.sendMsg(makeMsg("SMTG-D Running since: "+self.fm_start_time,source,dest))
             elif action.getValue() == "cmds":
                 routing.sendMsg(makeMsg(["status","plugins","cmds",
-                                         "alerters","plugid","alertid"],
+                                         "alerters","plugid","alertid","var","cvar","help"],
                                 source,dest))
                 
             elif action.getValue() == "plugins":
@@ -110,10 +117,12 @@ class SmtgDaemon(RDaemon):
                 routing.sendMsg(makeMsg(self.aman.getAlerterNames(),source,dest))
             elif action.getValue() == "plugid":
                 try:
-                    result = self.pman.getPluginID(action.get("args")[0])
+                    result = routing.getIDByName(action.get("args")[0])
                     if result is not None:
-                        routing.sendMsg(makeErrorMsg("name does not exist.",None,dest))
-                    else:routing.sendMsg(makeMsg(result,source,dest))
+                        routing.sendMsg(makeErrorMsg("name '"+action.get("args")[0]+"' does not exist.",None,dest))
+                    else:
+                        routing.sendMsg(makeMsg(result,source,dest))
+                    
                 except:
                     routing.sendMsg(makeErrorMsg("plugid needs an argument.",None,dest))
             elif action.getValue() == "alertid":
@@ -124,9 +133,10 @@ class SmtgDaemon(RDaemon):
                     else:routing.sendMsg(makeMsg(result,source,dest))
                 except:
                     routing.sendMsg(makeErrorMsg("alertid needs an argument.",None,dest))
-                
-            elif action.getValue() == "var":
-                pass
+            elif action.getValue() == "idsearch": pass #TODO: implement idsearch command to search for an id
+            elif action.getValue() == "var":pass #TODO: implement var command to get internal variables
+            elif action.getValue() == "cvar":pass #TODO: implement cvar to change variables
+            elif action.getValue() == "help": self.__help(dest, msg.get("args"))
             
             # the command does not exist.
             else: routing.sendMsg(makeErrorMsg("invalid action",source,dest))
@@ -135,6 +145,58 @@ class SmtgDaemon(RDaemon):
             logging.error("error from %s: %s" % (action.getSource(), action.getValue()))
         # the message is invalid, send the error back.
         else: routing.sendMsg(makeErrorMsg("invalid message", None, action.getSource()))
+  
+  
+    def __help(self, dest, args):
+        """ Generates a dictionary for you to print out for a help screen. As arguments
+        to this function, you can have:
+            - blank : this will cause the daemon to print out a help screen just for 
+                    the daemon
+            - a plug-ins id/name : this will give back a help screen for a given plugin
+            - an alerts id/name : this will give back a help screen for a given alerter
+            - the word "all" : a complete help screen
+        """
+        cmds = {"status":"get the daemon status, or the status of a plugin/alert given the id.",
+                "plugins": "get a list of plug-ins ids to names.",
+                "cmds": "get the daemon command list.",
+                "alerters": "get a list of alerters ids to names.",
+                "plugid": "given a plug-ins name, it will return the ID",
+                "alertid": "given an alerter's name it will return the ID",
+                "idsearch": "returns whether a given id exists",
+                "var": "returns all internal variables and their values",
+                "cvar": "given a variable name and a value, it will change it to the given value.",
+                "help": "returns a help screen for the daemon, alerters, or a plugin, or even all of the above."}
+        try:
+            if len(args) >0:
+                if args[0] == "all":
+                    all = {"Daemon":cmds}
+                    try:
+                        plugins = self.pman.getAllPlugins()
+                        for plug in plugins:
+                            all[plug.name] = plug.plugin_object._get_commands()
+                            
+                        alerters = self.aman.getAllPlugins()
+                        for alert in alerters:
+                            all[alert.name] = alert.plugin_object._get_commands()
+                    except: pass
+                    routing.sendMsg(makeMsg(all,None,dest))    
+                else: # its a plugin or an alert id.
+                    if routing.isRegisteredByID(args[0]):
+                        routing.sendMsg(makeMsg(
+                                    routing.getReferenceByID(args[0])._get_commands(), None, dest))
+                    elif routing.isRegisteredByName(args[0]):
+                        routing.sendMsg(makeMsg(
+                                    routing.getReferenceByName(args[0])._get_commands(), None, dest))
+                    else:
+                        routing.sendMsg(makeErrorMsg("invalid ID or Name",None,dest))
+            else:#just the daemon ones.
+                routing.sendMsg(makeMsg(cmds,None,dest))
+                
+        except Exception as e:
+            logging.exception(e)
+            routing.sendMsg(makeErrorMsg("error getting help", None, dest))
+            
+  
   
     def _run(self):
         """ Starts the three threads that make up the internals of the daemon
@@ -158,8 +220,7 @@ class SmtgDaemon(RDaemon):
         """
         try:
             # load the plug-in manager now and search for the plug-ins.
-            self.pman = SmtgPluginManager(default_plugin_dirs, 
-                                          self.config)
+            self.pman = SmtgPluginManager(default_plugin_dirs, self.config)
             self.pman.collectPlugins()
             self.pman.activatePlugins()
     
@@ -181,16 +242,18 @@ class SmtgDaemon(RDaemon):
             logging.debug("pull-thread started")
             while self.isRunning():
                 
-                # get all active feed plug-ins
-                activeFeeds = self.pman.getLoopPlugins()
-                if activeFeeds:
-                    for feed in activeFeeds:
-                        if feed.is_activated:
+                # get all active loop plug-ins
+                activePlugins = self.pman.getLoopPlugins()
+                if activePlugins:
+                    for plugin in activePlugins:
+                        if plugin.is_activated:
                             # for each active feed run the update function with no
                             # arguments. The only time arguments are needed 
                             # is if the plug-in was force updated by a command.
-                            logging.debug("pulling feed %s" % feed.name)
-                            feed.plugin_object._update()
+                            logging.debug("pulling LoopPlugin: %s" % plugin.name)
+                            try: plugin.plugin_object._update()
+                            except Exception as e:
+                                logging.error("%s failed to update: %s" % (plugin.name, e))    
                 
                 try: # sleep, and every five seconds check if still alive
                     count=0
