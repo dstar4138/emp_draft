@@ -12,16 +12,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and 
 limitations under the License. 
 """
-from alerters.ExecAlerter import ExecAlerter
+from smtg.alert.smtgalert import Alerter
 
-class SoundAlerter(ExecAlerter):
-    """ Plays a sound when it gets an alert. Only really works if 
-    its on the local machine and it has speakers... Duh
-    """
+class ExecAlerter(Alerter):
+    """ Runs a program when an alert happens."""
     
-    def __init__(self, conf, name="Sound Alerter"):
+    def __init__(self, conf, name="Exec Alerter"):
         """Sets up the alerter."""
-        ExecAlerter.__init__(self,conf, name)
+        Alerter.__init__(self,conf, name)
         
     def _handle_msg(self, msg):
         """ """

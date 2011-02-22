@@ -95,13 +95,12 @@ writeto_cfg_file = None
 #
 if CUR_PLATFORM.find("linux")!=-1:    #linux systems.
     default_configs["Daemon"]["pid-file"]="/var/tmp/smtg.pid"
-
     default_configs["Logging"]["log-file"]=os.path.expanduser("~/.smtg/errors.log")
-
     writeto_cfg_file = os.path.expanduser("~/.smtg/smtg.cfg")
+    
     default_cfg_files.append("/etc/smtg/smtg.cfg")
     default_cfg_files.append(writeto_cfg_file)
-    # then the given file will be read in at the end in SmtgConfigParser
+    # then a given file will be read in at the end in SmtgConfigParser
 
     default_plugin_dirs.append("/etc/smtg/plugins")
     default_plugin_dirs.append(os.path.expanduser("~/.smtg/plugins"))

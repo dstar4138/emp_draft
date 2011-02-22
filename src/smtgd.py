@@ -15,27 +15,24 @@ See the License for the specific language governing permissions and
 limitations under the License. 
 """
 
-
-__version__ = "0.6"
 __usage__ = "usage: %prog {option} [configfile]"
 __description__ = """ 
-The SMTGD program is a shortcut interface for getting the daemon running.
-Any actual interaction with the daemon should go through smtg rather than 
-smtgd. This is so logging and proper error handling can be provided as that 
-is the user interface and not a background daemon server. Please note that 
-all the daemon controls are also provided in the smtg interface for you.
+The smtgd program is a small example interface for interacting with 
+just the daemon. Any actual useful functionality is in smtg instead.
+Please use smtgd only for your startup scripts to get the daemon up 
+and running, and then shutting it down.  
 """
 
 import sys,logging
 from optparse import OptionParser, SUPPRESS_HELP
 
 from smtg.daemon.daemonipc import DaemonClientSocket
-from smtg.daemon.SmtgDaemon import SmtgDaemon
+from smtg.daemon.SmtgDaemon import SmtgDaemon, __version__
 from smtg.daemon.comm.messages import makeCommandMsg, strToMessage
    
 def main():
     parser = OptionParser( usage=__usage__, 
-                           version="SMTG-D "+__version__,
+                           version="Version: smtgd "+__version__,
                            description=__description__ )
     parser.add_option("--start",action="store_const", const=0, dest="state", 
                       help="start the SMTG daemon")

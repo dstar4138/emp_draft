@@ -33,7 +33,7 @@ from optparse import OptionParser, OptionGroup, SUPPRESS_HELP
 ###############################################################################
 #######################    Other Helper methods    ############################
 ###############################################################################
-
+#XXX: no one will use this damn program without a nice interface...
 def setupParser():
     """
         Sets up the parser by pulling all the plug-in's 
@@ -49,13 +49,12 @@ def setupParser():
     daemonGroup.add_option("-t", "--start-daemon", action="store_const", const=1, dest="daemonStatus", help="Starts the daemon, if off.", default=-1);
     daemonGroup.add_option("-e", "--restart-daemon", action="store_const", const=2, dest="daemonStatus", help="Restarts the Daemon.");
     daemonGroup.add_option("-s", "--stop-daemon", action="store_const", const=0, dest="daemonStatus", help="Stops the daemon if it is running.");
+    daemonGroup.add_option("-c", "--config", action="store_const", help="Stops the daemon if it is running.");
     daemonGroup.add_option("-d", nargs=0, dest="daemonize", help=SUPPRESS_HELP)
     tmpP.add_option_group( daemonGroup );    
 
     pluginGroup = OptionGroup(tmpP, "Plugin Options", "Options utilizing plugins, use carefully, might affect logs and config files.");
     pluginGroup.add_option("-p","--plugin", dest="plugin", help="describes which of the plugins given the command will be referencing.", metavar="PLUGIN");
-    pluginGroup.add_option("-a","--add-plugin", nargs=2, help="give the name you will reference the PLUGIN by and the SOURCE of the plugin.", metavar="PLUGIN SOURCE");
-    pluginGroup.add_option("-r","--remove-plugin", help="give the name of the PLUGIN you want to remove", metavar="PLUGIN");
     pluginGroup.add_option("-l","--list-plugins", action="store_false", dest="listPlugins", help="list the plug-ins visible by the smtg daemon");
     pluginGroup.add_option("-h","--plugin-help", help="get help on a given PLUGIN", metavar="PLUGIN");
     tmpP.add_option_group( pluginGroup );

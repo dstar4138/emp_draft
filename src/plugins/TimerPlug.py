@@ -12,20 +12,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and 
 limitations under the License. 
 """
-from alerters.ExecAlerter import ExecAlerter
 
-class SoundAlerter(ExecAlerter):
-    """ Plays a sound when it gets an alert. Only really works if 
-    its on the local machine and it has speakers... Duh
+from smtg.plugin.smtgplugin import SignalPlugin
+
+
+
+class TimerPlug(SignalPlugin):
+    """The Timer plug-in will be the most simplistic SignalPlugin. It will
+    create a timer in accordance with the time you need, and then send an 
+    alert once the timer is finished. You can ask for a port number from 
+    this plug-in if you want the alert to bypass the daemon all together and
+    ping some other program.
     """
-    
-    def __init__(self, conf, name="Sound Alerter"):
-        """Sets up the alerter."""
-        ExecAlerter.__init__(self,conf, name)
-        
-    def _handle_msg(self, msg):
-        """ """
-        pass
-    
-    def _alert(self, args):
-        pass
+    pass

@@ -14,7 +14,7 @@ limitations under the License.
 """
 
 
-__version__ = "0.5.1"
+__version__ = "0.7.1"
 __description__ = """
 The SMTG-Daemon is responsible for alerts, updates and other plug-in
 communications. However, any interaction should go through smtg rather

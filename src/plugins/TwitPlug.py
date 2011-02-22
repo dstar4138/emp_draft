@@ -12,18 +12,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and 
 limitations under the License. 
 """
-from smtg.alert.smtgalert import Alerter
 
-class RSSAlerter(Alerter):
-    """ Updates a file when an alert happens. This will work well with conky."""
-    
-    def __init__(self, conf, name="File Alerter"):
-        """Sets up the alerter."""
-        Alerter.__init__(self,conf, name)
-        
-    def _handle_msg(self, msg):
-        """ """
-        pass
-    
-    def _alert(self, args):
-        pass
+from smtg.plugin.smtgplugin import LoopPlugin
+
+class TwitPlug(LoopPlugin):
+    """This will fully utilize the Twitter.com API and allow you to
+    send any command that it allows. It will also readly check your 
+    private-message mailbox and you time-line.
+    """
+    pass

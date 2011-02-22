@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License. 
 """
 
-import os
+import os, sys
 from configparser import SafeConfigParser
 from smtg.config.defaults import default_configs, default_cfg_files, writeto_cfg_file
 
@@ -41,9 +41,13 @@ class SmtgConfigParser(SafeConfigParser):
         ## now set up the parent class using defaults ##
         SafeConfigParser.__init__(self)
         #reset internal configparser variable...
-        # i know thats bad form, but this is what happens:
-        self._sections=default_configs 
-
+        if sys.version_info[0]==3 and sys.version_info[1]<2:            
+            # i know thats bad form, but this is what happens when
+            # you dont think ahead 
+            self._sections=default_configs
+        else:
+            #this is in python3.2+ only
+            self.read_dict(default_configs) 
 
     def validateInternals(self):
         """ Check all the values you are overwriting from the config 
@@ -121,19 +125,19 @@ class SmtgConfigParser(SafeConfigParser):
                         
                     if hasattr(plugin.plugin_object, "autostart"): #its a SignalPlugin
                         self.set("plugin_"+plugin.name,
-                                 "autostart",plugin.plugin_object.autostart)
+                                 "autostart",str(plugin.plugin_object.autostart))
                     elif hasattr(plugin.plugin_object,"update_importance"):
                         self.set("plugin_"+plugin.name,
-                                 "importance",plugin.plugin_object.update_importance)
+                                 "importance",str(plugin.plugin_object.update_importance))
                     #else, it doesn't matter 
-                except: pass 
+                except: pass
             
             # update the alerter variables before saving.
             for alerter in alerters:
                 try:
                     for key,value in alerter.plugin_object.config:
-                        self.set("alerter_"+alerter.name, key, value)
-                except: pass 
+                        self.set("alerter_"+alerter.name, str(key), str(value))
+                except: pass
             
             # make sure it exists and can be written to.
             if self.__try_setup_path(writeto_cfg_file):
