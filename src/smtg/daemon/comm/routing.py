@@ -33,7 +33,9 @@ def register(name, ref):
             continue
         else:
             _registration[id] = (name,ref)
-            return id
+            ref.ID = id
+            logging.debug("registered: %s=%s"%(id,name))
+            break
 
 def isRegisteredByID(id):
     """ Checks if the id is registered in the Router, returns a boolean."""
@@ -108,7 +110,7 @@ def startRouter(base=None, triggermethod=lambda:False):
             # If the destination is registered, then send it
             logging.debug("registered: %s"%str(list(_registration.keys())))
             logging.debug("destination: %s"%msg.getDestination())
-            if msg.getDestination() in list(_registration.keys()):
+            if isRegisteredByID(msg.getDestination()):
                 #ok to send since its been registered
                 _,ref = _registration.get(msg.getDestination())
                 logging.debug("sending message: %s" % msg)
@@ -133,7 +135,14 @@ def startRouter(base=None, triggermethod=lambda:False):
                     else:
                         logging.debug("should have sent the message to the base handler")
                         
-            # if we dont know how to handle the message, log and discard it. oh well.
+            elif isRegisteredByName(msg.getDestination()):
+                #they messed up and passed it to the name, rather than the id. so we'll try to
+                # get the id and send it.
+                ref = getReferenceByName(msg.getDestination())
+                logging.debug("sending message: %s" % msg)
+                Thread(target=ref._handle_msg, args=(msg,)).start()
+            
+            # if we don't know how to handle the message, log and discard it. oh well.
             else:
                 logging.warning("I don't know who %s is, msg=%s" % 
                                 (msg.getDestination(), str(msg.getValue())))
@@ -147,7 +156,7 @@ def startRouter(base=None, triggermethod=lambda:False):
         ## to the internal rate, later. But currently randomizing provides a better 
         ## compensation than a constant time factor.
         if not _msg_queue.empty(): continue
-        try: time.sleep(random.random()) # TODO: efficient? 
+        try: time.sleep(random.random()) # XXX: efficient? 
         except: pass
         
     #when closing, it doesn't need to clean anything, just die and 
@@ -159,11 +168,8 @@ def startRouter(base=None, triggermethod=lambda:False):
 class Routee():
     """ Base object for every internal possibility for communication 
     Within SMTG,"""
-    def __init__(self, name):
-        """ Create the Routee object and register it with a Router."""
-        self.ID = register(name, self)
-        self.NAME = name
-        
+    ID = ''
+    
     def _handle_msg(self, msg):
         """Called by the router, this is what handles the message directed at 
         this object. WARNING: This method should be thread safe, since its 
@@ -179,8 +185,8 @@ class Interface(Routee):
         """ Create an Interface using a socket. Assumes that it is of the
         type DaemonServerSocket.
         """
-        Routee.__init__(self, "interface")
         self._socket = socket
+        register("interface", self)
         
     def _handle_msg(self, msg):
         """ Interfaces "handle the message" by sending it to the 

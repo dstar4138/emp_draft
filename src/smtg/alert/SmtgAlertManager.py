@@ -52,7 +52,7 @@ class SmtgAlertManager(VariablePluginManager):
         """ Get all the names of the plug-ins."""
         names = {}
         for alerter in self.getAllPlugins():
-            names[alerter.plugin_object.ID] = alerter.name
+            names[alerter.plugin_object.ID] = (alerter.plugname, alerter.name)
         return names
             
     def getAlerterIDs(self):

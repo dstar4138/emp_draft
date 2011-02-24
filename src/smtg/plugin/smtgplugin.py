@@ -20,7 +20,7 @@ limitations under the License.
 #  your program. Please consult this page for more information:
 #    http://wiki.python.org/moin/IntegratingPythonWithOtherLanguages
 #
-__version__="0.7"
+__version__="0.8"
 
 
 from yapsy.IPlugin import IPlugin
@@ -42,10 +42,9 @@ class SmtgPlugin(IPlugin, Routee):
     based on those. In ALL plug-ins you must override any method with a
     '_' in front of it. Such as the ones listed below.
     """
-    def __init__(self, conf, name):
+    def __init__(self, conf):
         self.config = conf
         IPlugin.__init__(self)
-        Routee.__init__(self, name)
         
     def _handle_msg(self, msg):
         """ Inherited from Routee, this is what runs when the Plug-in gets
@@ -69,6 +68,14 @@ class SmtgPlugin(IPlugin, Routee):
         """
         raise NotImplementedError("_get_commands() not implemented")
 
+    def _save(self):
+        """ When closing, SMTG will grab SmtgPlugin.config and push it back 
+        to the user's configuration file. So before that point it will call 
+        this function so the plug-in/alerter can wrap things up and save what
+        it needs to in the self.config variable.
+        """
+        pass #this is not NEEDED, but its helpful for the plug-ins 
+
 
 class LoopPlugin(SmtgPlugin):
     """Of the two arch-types of plug-ins this is the most commonly used.
@@ -76,8 +83,8 @@ class LoopPlugin(SmtgPlugin):
     a regular interval. The importance of the LoopPlugin decides when it
     gets to be pulled in the list of other LoopPlugins.
     """
-    def __init__(self, conf, name, importance=MID_IMPORTANCE):
-        SmtgPlugin.__init__(self, conf, name)
+    def __init__(self, conf, importance=MID_IMPORTANCE):
+        SmtgPlugin.__init__(self, conf)
         self.update_importance = importance
         for key,value in self.config:
             if key == "importance":
@@ -107,7 +114,7 @@ class SignalPlugin(SmtgPlugin):
     until it's hand-launched by the user. To do this: set auto_start
     to False.
     """
-    def __init__(self, conf, name, auto_start=False):
+    def __init__(self, conf, auto_start=False):
         SmtgPlugin.__init__(self, conf)
         self.autostart = auto_start
         for key,value in self.config:

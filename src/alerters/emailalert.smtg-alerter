@@ -1,6 +1,7 @@
 [Core]
 Name = Email Alerter
 Module = EmailAlerter
+Cmd = emailalerter
 
 [Documentation]
 Description = This alerter will email you when there is an alert triggered.

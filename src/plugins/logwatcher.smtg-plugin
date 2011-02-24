@@ -1,6 +1,7 @@
 [Core]
 Name = Log Watcher
 Module = logwatcher
+Cmd = log
 
 [Documentation]
 Description = This plug-in watches files, primarily log files. It can parse them and provide nice event descriptions.

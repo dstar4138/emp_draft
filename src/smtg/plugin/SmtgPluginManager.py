@@ -76,7 +76,7 @@ class SmtgPluginManager(VariablePluginManager):
         """ Get all the names of the plug-ins."""
         names = {}
         for plugin in self.getAllPlugins():
-            names[plugin.plugin_object.ID] = plugin.name
+            names[plugin.plugin_object.ID] = (plugin.plugname, plugin.name)
         return names
     
     def getPluginIDs(self):

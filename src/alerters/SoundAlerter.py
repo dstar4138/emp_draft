@@ -19,9 +19,9 @@ class SoundAlerter(ExecAlerter):
     its on the local machine and it has speakers... Duh
     """
     
-    def __init__(self, conf, name="Sound Alerter"):
+    def __init__(self, conf):
         """Sets up the alerter."""
-        ExecAlerter.__init__(self,conf, name)
+        ExecAlerter.__init__(self,conf)
         
     def _handle_msg(self, msg):
         """ """

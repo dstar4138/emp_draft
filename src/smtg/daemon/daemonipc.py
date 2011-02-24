@@ -49,14 +49,14 @@ class DaemonServerSocket():
     turned off of course).
     """
 
-    def __init__(self, portNum=8080, bufferSize=4096, encoding="utf-8", 
+    def __init__(self, port=8080, bufferSize=4096, encoding="utf-8", 
                  altsocket=None, ip_whitelist=[], externalBlock=True, 
                  allowAll=False):
         """ Sets up an internal socket on the server side and auto binds to 
         the given port number.
         """
         self.BUFFER_SIZE = bufferSize
-        self.PORT_NUM = portNum
+        self.PORT_NUM = port
         self.ENCODING = encoding
         self.WHITE_LIST = ip_whitelist
         self.LOCAL_ONLY = externalBlock
@@ -124,10 +124,10 @@ class DaemonServerSocket():
             possible_addrs += self.WHITE_LIST
         
         while True:
-            client_socket, (addr, port) = self.socket.accept()
+            client_socket, (addr, p) = self.socket.accept()
             
             if self.ALLOW_ALL or addr in possible_addrs:
-                return DaemonServerSocket(portNum=port, 
+                return DaemonServerSocket(port=p, 
                                           bufferSize=self.BUFFER_SIZE,
                                           encoding=self.ENCODING,
                                           altsocket=client_socket)
@@ -143,12 +143,12 @@ class DaemonClientSocket():
     special here except that it regulates the encoding and decoding of the 
     sent/recv messages for you.
     """
-    def __init__(self, portNum=8080, bufferSize=1024, encoding="utf-8"):
+    def __init__(self, port=8080, bufferSize=1024, encoding="utf-8"):
         """ This is the socket for the Client connection. Make sure the server
         socket has the same port number and encoding that the client has.
         """
         self.BUFFER_SIZE = bufferSize
-        self.PORT_NUM = portNum
+        self.PORT_NUM = port
         self.ENCODING = encoding
         self.RECV_LIMIT = 5 #DO NOT CHANGE!!
         self.socket = socket(AF_INET,SOCK_STREAM)

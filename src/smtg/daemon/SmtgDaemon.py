@@ -33,9 +33,9 @@ from socket import timeout
 from threading import Thread
 
 import smtg.daemon.comm.routing as routing
+import smtg.config.defaults as smtgconf
 from smtg.alert.SmtgAlertManager import SmtgAlertManager
 from smtg.plugin.SmtgPluginManager import SmtgPluginManager
-from smtg.config.defaults import default_plugin_dirs, default_alerter_dirs
 from smtg.config.logger import setup_logging
 from smtg.config.SmtgConfigParser import SmtgConfigParser
 
@@ -44,6 +44,12 @@ from smtg.daemon.daemonipc import DaemonServerSocket
 from smtg.daemon.comm.messages import makeErrorMsg, makeCommandMsg,  \
                                       makeMsg, strToMessage, COMMAND_MSG_TYPE,  \
                                       ERROR_MSG_TYPE 
+
+def checkSmtgStatus():
+    """ Checks whether the SmtgDaemon is currently running or not."""
+    import os
+    return os.path.exists(smtgconf.default_configs["Daemon"]["pid-file"])
+
 
 
 class SmtgDaemon(RDaemon):
@@ -102,7 +108,7 @@ class SmtgDaemon(RDaemon):
         if action is None:pass # the action is invalid, just skip
         elif action.getType() == COMMAND_MSG_TYPE:
             logging.debug("Daemon trying to run command now.")
-            source = None # this can either be self.ID or None since its the daemon.
+            source = self.ID # this can either be self.ID or None since its the daemon.
             dest = action.getSource() # the destination is the person we got the msg from
             if action.getValue() == "status":
                 routing.sendMsg(makeMsg("SMTG-D Running since: "+self.fm_start_time,source,dest))
@@ -110,7 +116,6 @@ class SmtgDaemon(RDaemon):
                 routing.sendMsg(makeMsg(["status","plugins","cmds",
                                          "alerters","plugid","alertid","var","cvar","help"],
                                 source,dest))
-                
             elif action.getValue() == "plugins":
                 routing.sendMsg(makeMsg(self.pman.getPluginNames(),source,dest))
             elif action.getValue() == "alerters":
@@ -181,12 +186,14 @@ class SmtgDaemon(RDaemon):
                     except: pass
                     routing.sendMsg(makeMsg(all,None,dest))    
                 else: # its a plugin or an alert id.
-                    if routing.isRegisteredByID(args[0]):
+                    if args[0] == "daemon":
+                        routing.sendMsg(makeMsg(cmds, None, dest))
+                    elif routing.isRegisteredByID(args[0]):
                         routing.sendMsg(makeMsg(
-                                    routing.getReferenceByID(args[0])._get_commands(), None, dest))
+                                    routing.getReferenceByID(args[0])._get_commands(), args[0], dest))
                     elif routing.isRegisteredByName(args[0]):
                         routing.sendMsg(makeMsg(
-                                    routing.getReferenceByName(args[0])._get_commands(), None, dest))
+                                    routing.getReferenceByName(args[0])._get_commands(), args[0], dest))
                     else:
                         routing.sendMsg(makeErrorMsg("invalid ID or Name",None,dest))
             else:#just the daemon ones.
@@ -220,12 +227,12 @@ class SmtgDaemon(RDaemon):
         """
         try:
             # load the plug-in manager now and search for the plug-ins.
-            self.pman = SmtgPluginManager(default_plugin_dirs, self.config)
+            self.pman = SmtgPluginManager(smtgconf.default_plugin_dirs, self.config)
             self.pman.collectPlugins()
             self.pman.activatePlugins()
     
             # start AlertManager and collect/activate alerters
-            self.aman = SmtgAlertManager(default_alerter_dirs,
+            self.aman = SmtgAlertManager(smtgconf.default_alerter_dirs,
                                          self.config)
             self.aman.collectPlugins()
             self.aman.activatePlugins()
@@ -282,7 +289,7 @@ class SmtgDaemon(RDaemon):
         logging.debug("communication-thread started")
         # Create socket and bind to address
         whitelist = str(self.config.get("Daemon", "whitelisted-ips")).split(",")
-        isocket = DaemonServerSocket(portNum=self.getComPort(),
+        isocket = DaemonServerSocket(port=self.getComPort(),
                                      ip_whitelist=whitelist,
                                      externalBlock=self.config.getboolean("Daemon","local-only"),
                                      allowAll=self.config.getboolean("Daemon", "allow-all"))

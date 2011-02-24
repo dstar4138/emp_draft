@@ -24,6 +24,9 @@ and running, and then shutting it down.
 """
 
 import sys,logging
+
+#Continuing to use OptionParser for backwards support for 3.0-3.1
+#plus there are no advanced features in argparse that we need
 from optparse import OptionParser, SUPPRESS_HELP
 
 from smtg.daemon.daemonipc import DaemonClientSocket
@@ -85,9 +88,9 @@ def main():
         elif options.status != None:
             try:
                 daemon = SmtgDaemon()
-                port = daemon.getComPort()
-                if port is not None:
-                    socket = DaemonClientSocket(portNum=port)
+                p = daemon.getComPort()
+                if p is not None:
+                    socket = DaemonClientSocket(port=p)
                     socket.connect()
                     msg = strToMessage(socket.recv())
                     logging.debug("smtgd got back: %s"%msg)
@@ -112,7 +115,7 @@ def main():
 
     except Exception as e:
         print("ERROR:",e)
- 
+        raise e
 
 ### Run main() if the file is called correctly ###
 if __name__ == "__main__":

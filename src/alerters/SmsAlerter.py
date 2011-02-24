@@ -19,9 +19,9 @@ from smtg.alert.smtgalert import Alerter
 class SmsAlerter(Alerter):#or maybe EmailAlerter
     """ Sends an email to a phone upon getting an Alert."""
     
-    def __init__(self, conf, name="Sms Alerter"):
+    def __init__(self, conf):
         """Sets up the alerter."""
-        Alerter.__init__(self,conf, name)
+        Alerter.__init__(self,conf)
         
     def _handle_msg(self, msg):
         """ """

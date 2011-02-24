@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.0
+#!/usr/bin/env python3.2
 """
 Social Monitor for the Terminal Geek (SMTG) - 
   A way for the socially inept to stay connected!
@@ -9,8 +9,6 @@ For support please visit Alexander's blog or even the
 SMTG project page: http://code.dstar4138.com/view?pid=2
 """
 
-__version__ = "version 0.0.2"
-__usage__ = "usage: %prog [options] [config-file]"
 __copyright__ = """
 Copyright (c) 2010-2011 Alexander Dean (dstar@csh.rit.edu)
 Licensed under the Apache License, Version 2.0 (the "License"); 
@@ -26,92 +24,171 @@ See the License for the specific language governing permissions and
 limitations under the License. 
 """
 
+__usage__ = "smtg [-h | -a | -i | -l | -t T [ -g | -? C ]] [command [args ...]]"
+__desc__ = '''
+SMTG is the interface for the SMTG Daemon. This is a full "general case"  
+interface for handling most (if not all) commands for every plug-in, alerter, 
+and the daemon itself. The interactive mode is a simple Curses interface for 
+looking cool while monitoring the hell out of your plug-ins. 
+'''
 import sys
-from smtg.daemon.SmtgDaemon import SmtgDaemon
-from optparse import OptionParser, OptionGroup, SUPPRESS_HELP
+import logging
+import argparse
+from smtg.daemon.SmtgDaemon import checkSmtgStatus, SmtgDaemon
+from smtg.daemon.comm.messages import makeCommandMsg,strToMessage, ERROR_MSG_TYPE
+from smtg.daemon.daemonipc import DaemonClientSocket
+#import curses
 
-###############################################################################
-#######################    Other Helper methods    ############################
-###############################################################################
-#XXX: no one will use this damn program without a nice interface...
+
+def help():
+    print(__usage__)
+    print("%s"%__desc__)
+    print("""
+positional arguments:
+  command           A command for the target and any arguments for it.
+
+optional arguments:
+  -h, --help        show this help message and exit
+  -a, --all         Generate the total command list for all plugins. Think
+                    of it as a uber-help screen.
+  -i                Launch interactive mode
+  -l, --list        List targets
+  -t T, --target T  Change the command target by name/id. (Defaults to the
+                    pointing at the daemon).
+  -g, --tcmds       Get target commands
+  -? C, --ask C     Ask the target how to use the command
+""")
+
+
 def setupParser():
-    """
-        Sets up the parser by pulling all the plug-in's 
-        options into the main parser. Also does some simple
-        type checking and sets some constant values.
-    """
-    tmpP = OptionParser(usage=__usage__, 
-                        version=__version__,
-                        add_help_option=False)
-    tmpP.add_option("-?","--help", action="help", help="show this help screen");
+    """Sets up the parser for smtg, this can be expanded when necessary."""
+    parser = argparse.ArgumentParser(description=__desc__,
+                                     usage=__usage__,
+                                     prog="smtg",
+                                     add_help=False)
+    parser.set_defaults(target=['daemon'])
     
-    daemonGroup = OptionGroup(tmpP, "Daemon Options", "Options for controlling the SMTG Daemon");
-    daemonGroup.add_option("-t", "--start-daemon", action="store_const", const=1, dest="daemonStatus", help="Starts the daemon, if off.", default=-1);
-    daemonGroup.add_option("-e", "--restart-daemon", action="store_const", const=2, dest="daemonStatus", help="Restarts the Daemon.");
-    daemonGroup.add_option("-s", "--stop-daemon", action="store_const", const=0, dest="daemonStatus", help="Stops the daemon if it is running.");
-    daemonGroup.add_option("-c", "--config", action="store_const", help="Stops the daemon if it is running.");
-    daemonGroup.add_option("-d", nargs=0, dest="daemonize", help=SUPPRESS_HELP)
-    tmpP.add_option_group( daemonGroup );    
-
-    pluginGroup = OptionGroup(tmpP, "Plugin Options", "Options utilizing plugins, use carefully, might affect logs and config files.");
-    pluginGroup.add_option("-p","--plugin", dest="plugin", help="describes which of the plugins given the command will be referencing.", metavar="PLUGIN");
-    pluginGroup.add_option("-l","--list-plugins", action="store_false", dest="listPlugins", help="list the plug-ins visible by the smtg daemon");
-    pluginGroup.add_option("-h","--plugin-help", help="get help on a given PLUGIN", metavar="PLUGIN");
-    tmpP.add_option_group( pluginGroup );
+    parser.add_argument("-h","--help", action="store_true", help="show this help message and exit")
     
-    return tmpP
+    parser.add_argument("-i", action="store_true",  help="Launch interactive mode")
+    parser.add_argument("-l","--list", action="store_true", help="List targets")
+    parser.add_argument("-a","--all", action="store_true", help="Generate the total command list for all plugins ")
+    
+    parser.add_argument("-t","--target", nargs=1, metavar="T", help="Change the command target by name/id. (Defaults to the pointing at the daemon).")
+    parser.add_argument("-g","--tcmds", action="store_true", help="Get target commands")
+    parser.add_argument("-?", "--ask", nargs=1, metavar="C",  help="Ask the target how to use the command")
+    
+    parser.add_argument("command", nargs='*', help="A command for the target and any arguments for it.")
+    return parser
+
+
+def interactiveMode():
+    #TODO: interactive mode in glorious curses! 
+    # purhaps consider urwid to make things easier: http://excess.org/urwid/
+    print("Apologies, interactive mode is not yet finished. Please try again later.")
 
 
 
 
-###############################################################################
-###############################    MAIN    ####################################
-###############################################################################
 def main():
-    try:
-        parser = setupParser()
-        if len(sys.argv[1:]) == 0:
-            parser.print_usage()
-            print("Use '-?' for help and a list of options.")
-            return
-            
-        (options, args) = parser.parse_args()    
-        if len(args) > 1:
-            print("Invalid argument structure. Use '-?' for help.\n")
-            return
-       
-
-        if hasattr(options, 'daemonStatus'):
-            if len(args) == 1:
-                daemon = SmtgDaemon(configfile=args[0], dprg="smtg.py")
-            else:
-                daemon = SmtgDaemon(dprg="smtg.py")
-
-            if options.daemonStatus == 0: #stop
-                daemon.stop()
-            elif options.daemonStatus == 1: #start
-                daemon.start()
-            elif options.daemonStatus == 2: #restart
-                daemon.restart()
-            elif hasattr(options, 'daemonize'):
-                daemon._run()
-
-        #
-        # TODO run the other options
-        #
-        #some methods will need to check if the daemon is running before hand
-        #
-        
-    except Exception as e:
-        ''' Handle some exceptions!! '''
-        print(e)
-        sys.exit(1)
+    parser = setupParser()
+    args = parser.parse_args()
+    #handle the commands given
+    if len(sys.argv) == 1:
+        print("Usage:",__usage__,"\n\nType 'smtg -h' for some help.")
+        return
+    
+    print(args)
+    if args.help: help()
+    elif args.i:  interactiveMode()
     else:
-        ''' no issues, return correctly '''
-        sys.exit(0)
+        try:
+            # we will be communicating with the daemon
+            if not checkSmtgStatus(): print("Error: Daemon not running!");return
+            daemon = DaemonClientSocket(port=SmtgDaemon().getComPort())
+            daemon.connect()
+            msg = strToMessage(daemon.recv())
+            if msg.getValue() != "proceed": print("Error: Couldn't connect to the daemon.");return
+            
+            myID = msg.getDestination()
+                
+            #what are we communicating    
+            if args.list:
+                daemon.send(makeCommandMsg("plugins",myID))
+                plugs = strToMessage(daemon.recv()).getValue()
+                daemon.send(makeCommandMsg("alerters",myID))
+                alerters = strToMessage(daemon.recv()).getValue()
+            
+                #print the list all pretty like:
+                print("Attached targets and their temp IDs:")
+                print("   Plugins:")
+                for k in plugs.keys():
+                    print("     %s" % plugs[k][1])
+                    print("        Name: %s"%plugs[k][0])
+                    print("        ID: %s"%k)
+                print("\n   Alerters:")
+                for k in alerters.keys():
+                    print("     %s" % alerters[k][1])
+                    print("        Name: %s"%alerters[k][0])
+                    print("        ID: %s"%k)
+                print()
+                
+        
+            elif args.all: 
+                daemon.send(makeCommandMsg("help",myID, args=["all"]))
+                cmds = strToMessage(daemon.recv()).getValue()
+                
+                for target in cmds.keys():
+                    print("%s"%target)
+                    print("Commands:")
+                    for cmd in cmds[target].keys():
+                        print("  %s  -%s"%(cmd,cmds[target][cmd]))
+                    print()
+                    
+            else:
+                # now we can start parsing targets and figuring out what to do with them
+                if args.tcmds:
+                    daemon.send(makeCommandMsg("help",myID, args=args.target))
+                    cmds = strToMessage(daemon.recv()).getValue()
+                    for cmd in cmds.keys():
+                        print("  %s  -%s"%(cmd,cmds[cmd]))
+                elif args.ask:
+                    daemon.send(makeCommandMsg("help",myID, args=args.target))
+                    cmds = strToMessage(daemon.recv()).getValue()
+                    cmdfound = False
+                    for cmd in cmds.keys():
+                        if args.ask[0] == cmd:
+                            print("  %s  -%s"%(cmd,cmds[cmd]))
+                            cmdfound = True
+                            break
+                            
+                    if not cmdfound:
+                        print("The target does not have that command.")
+                else:
+                    if len(args.command) < 1:
+                        print("Usage: ",__usage__)
+                        daemon.send(makeCommandMsg("help", myID, args=args.target))
+                        cmds = strToMessage(daemon.recv()).getValue()
+                        print("\n%s Commands: "%args.target[0])
+                        for cmd in cmds.keys():
+                            print("  %s  -%s"%(cmd,cmds[cmd]))
+                    else:
+                        daemon.send(makeCommandMsg(args.command[0], myID, dest=args.target[0], args=args.command[1:]))
+                        result = strToMessage(daemon.recv())
+                        if result.getType() == ERROR_MSG_TYPE:
+                            print("ERROR:",result.getValue())
+                        else:
+                            # since this is a general case interface, we dont really know 
+                            # how to interpret the result of an argument. But this can
+                            # be utilized in a script or a higher level interface. if you 
+                            # want to call smtg through your program be sure you can 
+                            # handle JSON 
+                            print(result.getValue()) 
+                
+            
+        except:
+            print("Error: Couldn't connect to the daemon.")
+                
 
-
-
-if __name__ == "__main__":
-    main();
-
+if __name__ == "__main__": main()
+    

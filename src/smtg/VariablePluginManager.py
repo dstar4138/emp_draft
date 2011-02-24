@@ -14,7 +14,9 @@ limitations under the License.
 """
 import os
 import sys
+import re
 import logging
+import smtg.daemon.comm.routing as routing
 from yapsy.IPlugin import IPlugin
 from yapsy.PluginInfo import PluginInfo
 from yapsy.PluginManager import PluginManager
@@ -24,6 +26,9 @@ from yapsy.FilteredPluginManager import FilteredPluginManager
 class SmtgPluginInfo(PluginInfo):
     def __init__(self, plugin_name, plugin_path):
         self.defaults = {}
+        self.plugname = str(plugin_name).strip().lower().replace(" ", "")
+        re.sub(r'[^\w]', '', self.plugname)
+        
         PluginInfo.__init__(self, plugin_name, plugin_path)
         
         
@@ -113,8 +118,12 @@ class DefaultPluginManager(PluginManager):
                     if not (candidate_infofile in self._category_file_mapping[current_category]): 
                         # we found a new plugin: initialise it and search for the next one
                         self.config.defaultAttachmentVars(plugin_info.name, plugin_info.defaults, current_category)
-                        plugin_info.plugin_object = element(self.config.getPluginVars(plugin_info.name),plugin_info.name)
+                        plugin_info.plugin_object = element(self.config.getPluginVars(plugin_info.name))
                         plugin_info.category = current_category
+                        
+                        #now we will register the plugin with the router
+                        routing.register(plugin_info.plugname, plugin_info.plugin_object)
+                        
                         self.category_mapping[current_category].append(plugin_info)
                         self._category_file_mapping[current_category].append(candidate_infofile)
                         current_category = None
@@ -141,6 +150,11 @@ class DefaultPluginManager(PluginManager):
                 plugin_info.copyright    = config_parser.get("Documentation", "Copyright")
             if config_parser.has_option("Documentation","Description"):
                 plugin_info.description = config_parser.get("Documentation", "Description")
+        
+        # check for a plugname, this is handy!!
+        if config_parser.has_section("Core"):
+            if config_parser.has_option("Core","Cmd"):
+                plugin_info.plugname = config_parser.get("Core","Cmd")
         
         if config_parser.has_section("Defaults"):
             for option in config_parser.options("Defaults"):

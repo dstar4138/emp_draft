@@ -1,6 +1,7 @@
 [Core]
 Name = File Watcher
 Module = filewatcher
+Cmd = file
 
 [Documentation]
 Description = This plug-in watches files, it doesn't do anything special. Use it like a demo for a working plug-in.

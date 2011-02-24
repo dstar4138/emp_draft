@@ -14,14 +14,14 @@ limitations under the License.
 """
 
 import os, sys
-from configparser import SafeConfigParser
+from configparser import ConfigParser
 from smtg.config.defaults import default_configs, default_cfg_files, writeto_cfg_file
 
 CATEGORY_MAP = {"Feeds":"plugin_",
                 "Signals":"plugin_",
                 "Alerts":"alerter_"}
 
-class SmtgConfigParser(SafeConfigParser):
+class SmtgConfigParser(ConfigParser):
     """At its heart, this config parser is a SafeConfigParser. The
     only added functionality is the default configurations automatically
     added and automatic config file validation. Oh, and there are some
@@ -39,7 +39,7 @@ class SmtgConfigParser(SafeConfigParser):
             self.CONFIG_FILES.append(configfile)
 
         ## now set up the parent class using defaults ##
-        SafeConfigParser.__init__(self)
+        ConfigParser.__init__(self)
         #reset internal configparser variable...
         if sys.version_info[0]==3 and sys.version_info[1]<2:            
             # i know thats bad form, but this is what happens when
@@ -120,6 +120,8 @@ class SmtgConfigParser(SafeConfigParser):
             # update the plug-in variables before saving.
             for plugin in plugins:
                 try:
+                    plugin._save() #make the plugin save before pulling the configs
+                    
                     for key,value in plugin.plugin_object.config:
                         self.set("plugin_"+plugin.name,key,value)
                         
@@ -135,6 +137,7 @@ class SmtgConfigParser(SafeConfigParser):
             # update the alerter variables before saving.
             for alerter in alerters:
                 try:
+                    alerter._save() #make the plugin save before pulling the configs
                     for key,value in alerter.plugin_object.config:
                         self.set("alerter_"+alerter.name, str(key), str(value))
                 except: pass
