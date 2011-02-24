@@ -123,7 +123,7 @@ class SignalPlugin(SmtgPlugin):
             try:self.autostart=int(self.config["autostart"])
             except: self.autostart=auto_start
 
-    def _run(self, *args):
+    def _run(self):
         """Signal Plug-ins get their own threads! This is the method that
         gets run when the plug-in is loaded into the daemon. When this 
         method returns the Plug-in is put into a waiting area until 

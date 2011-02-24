@@ -250,6 +250,11 @@ class SmtgDaemon(RDaemon):
             # start the interface thread
             Thread(target=self.__t2).start()
     
+            #start all the singal threads that require an autostart which are activated
+            for signal in self.pman.getSignalPlugins():
+                if signal.is_activated and signal.autostart:
+                    Thread(target=signal._run).start()
+    
             # start the pull loop.
             logging.debug("pull-thread started")
             while self.isRunning():
