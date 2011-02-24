@@ -32,7 +32,6 @@ and the daemon itself. The interactive mode is a simple Curses interface for
 looking cool while monitoring the hell out of your plug-ins. 
 '''
 import sys
-import logging
 import argparse
 from smtg.daemon.SmtgDaemon import checkSmtgStatus, SmtgDaemon
 from smtg.daemon.comm.messages import makeCommandMsg,strToMessage, ERROR_MSG_TYPE
@@ -88,8 +87,10 @@ def interactiveMode():
     print("Apologies, interactive mode is not yet finished. Please try again later.")
 
 
-
-
+#
+# MAIN 
+#  Handles the incoming command and parses it.
+#
 def main():
     parser = setupParser()
     args = parser.parse_args()

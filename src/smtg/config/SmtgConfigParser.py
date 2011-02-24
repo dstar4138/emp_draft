@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License. 
 """
 
-import os, sys
+import os, sys, logging
 from configparser import ConfigParser
 from smtg.config.defaults import default_configs, default_cfg_files, writeto_cfg_file
 
@@ -120,27 +120,29 @@ class SmtgConfigParser(ConfigParser):
             # update the plug-in variables before saving.
             for plugin in plugins:
                 try:
-                    plugin._save() #make the plugin save before pulling the configs
+                    plugin.plugin_object._save() #make the plugin save before pulling the configs
                     
                     for key,value in plugin.plugin_object.config:
-                        self.set("plugin_"+plugin.name,key,value)
+                        self.set("plugin_"+plugin.plugname,key,value)
                         
                     if hasattr(plugin.plugin_object, "autostart"): #its a SignalPlugin
-                        self.set("plugin_"+plugin.name,
+                        self.set("plugin_"+plugin.plugname,
                                  "autostart",str(plugin.plugin_object.autostart))
                     elif hasattr(plugin.plugin_object,"update_importance"):
-                        self.set("plugin_"+plugin.name,
+                        self.set("plugin_"+plugin.plugname,
                                  "importance",str(plugin.plugin_object.update_importance))
                     #else, it doesn't matter 
-                except: pass
+                except Exception as e: 
+                    logging.exception(e)
             
             # update the alerter variables before saving.
             for alerter in alerters:
                 try:
-                    alerter._save() #make the plugin save before pulling the configs
+                    alerter.plugin_object._save() #make the plugin save before pulling the configs
                     for key,value in alerter.plugin_object.config:
-                        self.set("alerter_"+alerter.name, str(key), str(value))
-                except: pass
+                        self.set("alerter_"+alerter.plugname, str(key), str(value))
+                except Exception as e:
+                    logging.exception(e)
             
             # make sure it exists and can be written to.
             if self.__try_setup_path(writeto_cfg_file):

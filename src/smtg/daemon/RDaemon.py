@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License. 
 """
 import sys
-from smtg.daemon.comm.routing import Routee, register
+from smtg.daemon.comm.routing import Routee
 from smtg.daemon.daemon import Daemon
 
 class RDaemon(Daemon, Routee):
@@ -26,4 +26,3 @@ class RDaemon(Daemon, Routee):
                  dargs="", daemonizerArg="-d", daemonizingCommand=None):
         """ Create a RDaemon, which is a daemon, that is also a Routee. """
         Daemon.__init__(self, pidfile, pchannel, dprog, dargs, daemonizerArg, daemonizingCommand)
-        register("daemon",self)

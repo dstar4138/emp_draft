@@ -117,8 +117,8 @@ class DefaultPluginManager(PluginManager):
                 if current_category is not None:
                     if not (candidate_infofile in self._category_file_mapping[current_category]): 
                         # we found a new plugin: initialise it and search for the next one
-                        self.config.defaultAttachmentVars(plugin_info.name, plugin_info.defaults, current_category)
-                        plugin_info.plugin_object = element(self.config.getPluginVars(plugin_info.name))
+                        self.config.defaultAttachmentVars(plugin_info.plugname, plugin_info.defaults, current_category)
+                        plugin_info.plugin_object = element(self.config.getPluginVars(plugin_info.plugname))
                         plugin_info.category = current_category
                         
                         #now we will register the plugin with the router

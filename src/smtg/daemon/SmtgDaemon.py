@@ -238,6 +238,7 @@ class SmtgDaemon(RDaemon):
             self.aman.activatePlugins()
     
             # starts the comm router running to send messages!!
+            routing.register("daemon",self)
             Thread(target=routing.startRouter,
                    kwargs={"base":self,
                            "triggermethod":self.isRunning}).start()

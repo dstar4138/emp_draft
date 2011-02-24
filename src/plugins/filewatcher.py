@@ -83,7 +83,7 @@ class FileWatcher(LoopPlugin):
         return self.is_activated
    
     def _update(self, *args):
-        if len(args) >0: #update the one given
+        if len(args) > 0: #update the one given
             pass # TODO: filewatcher._update with single file 
         else:#update all
             for file in list(self._files.keys()):
@@ -116,3 +116,7 @@ class FileWatcher(LoopPlugin):
         except:
             routing.sendMsg(makeErrorMsg("couldn't remove file.",self.ID,dest))
 
+
+    def _save(self):
+        """Pushes the internal variables to the config variable for saving! """
+        pass

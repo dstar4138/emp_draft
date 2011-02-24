@@ -88,7 +88,8 @@ class LoopPlugin(SmtgPlugin):
         self.update_importance = importance
         for key,value in self.config:
             if key == "importance":
-                self.update_importance=value
+                try:self.update_importance=int(value)
+                except: self.update_importance=importance
                 break
 
     def change_importance(self, importance):
@@ -119,7 +120,8 @@ class SignalPlugin(SmtgPlugin):
         self.autostart = auto_start
         for key,value in self.config:
             if key == "autostart":
-                self.autostart=value
+                try:self.autostart=bool(value)
+                except:self.autostart=auto_start
                 break
 
     def _run(self, *args):
