@@ -17,11 +17,10 @@ definitely more time consuming...
 Wishlist
 --------
 
+* Make a cool logo!
 * Jabber Signal Plugin for chats
 * Facebook Plugin
-* Daemon security... 
-** Add username/password capability...
-** Add support for more webservery stuff like ssl tunnels
+* Daemon security (Add username/password capability, tunneling?)
 * GUI interface in pyQT4
 * A backported interface in python2.6 for mobile devices
 

@@ -45,6 +45,9 @@ class SmtgPlugin(IPlugin, Routee):
     def __init__(self, conf):
         self.config = conf
         IPlugin.__init__(self)
+        if "activate" in self.config:
+            try: self.is_activated = bool(self.config["activate"])
+            except: pass
         
     def _handle_msg(self, msg):
         """ Inherited from Routee, this is what runs when the Plug-in gets
@@ -74,7 +77,7 @@ class SmtgPlugin(IPlugin, Routee):
         this function so the plug-in/alerter can wrap things up and save what
         it needs to in the self.config variable.
         """
-        pass #this is not NEEDED, but its helpful for the plug-ins 
+        self.config["activate"] = self.is_activated
 
 
 class LoopPlugin(SmtgPlugin):

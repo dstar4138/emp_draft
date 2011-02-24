@@ -14,7 +14,6 @@ limitations under the License.
 """
 import logging
 from plugins.filewatcher import FileWatcher
-from smtg.plugin.smtgplugin import HIGH_IMPORTANCE
 
 
 class LogWatcher(FileWatcher):
@@ -26,5 +25,6 @@ class LogWatcher(FileWatcher):
     
     def __init__(self, conf):
         FileWatcher.__init__(self, conf)
-        self.change_importance(HIGH_IMPORTANCE)
-        logging.debug("logwatcher set to high importance")
+        
+    def _save(self):
+        FileWatcher._save(self)

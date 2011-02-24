@@ -83,13 +83,17 @@ class FileWatcher(LoopPlugin):
    
     def _update(self, *args):
         if len(args) > 0: #update the one given
-            pass # TODO: filewatcher._update with single file 
+            if args[0] in self._files:
+                if self._files.get(args[0]) < os.path.getmtime(args[0]):
+                        self._files[args[0]] = os.path.getmtime(args[0])
+                        routing.sendMsg(makeAlertMsg("File '"+args[0]+"' changed at "+str(self._files[args[0]])+"!", self.ID))
+            #ignore the fact that the file doesn't exist, if this problem arises.
         else:#update all
             for file in list(self._files.keys()):
                 try: 
                     if self._files.get(file) < os.path.getmtime(file):
                         self._files[file] = os.path.getmtime(file)
-                        routing.sendMsg(makeAlertMsg("File '"+file+"' changed at "+str(self._files[file])+"!", source=self.ID))
+                        routing.sendMsg(makeAlertMsg("File '"+file+"' changed at "+str(self._files[file])+"!", self.ID))
                 except Exception as e: logging.exception(e)
                     
         
@@ -106,7 +110,7 @@ class FileWatcher(LoopPlugin):
 
     def rm_file(self, dest, args):
         try:
-            for key in list(self._files.keys()):
+            for key in self._files.keys():
                 if key == args[0]:
                     self._files.remove(key)
                     break
@@ -118,6 +122,7 @@ class FileWatcher(LoopPlugin):
 
     def _save(self):
         """Pushes the internal variables to the config variable for saving! """
+        LoopPlugin._save(self)
         filestring = ""
         count = len(self._files.keys())
         for file in self._files.keys():

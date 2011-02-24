@@ -113,7 +113,7 @@ class SmtgDaemon(RDaemon):
             if action.getValue() == "status":
                 routing.sendMsg(makeMsg("SMTG-D Running since: "+self.fm_start_time,source,dest))
             elif action.getValue() == "cmds":
-                routing.sendMsg(makeMsg(["status","plugins","cmds",
+                routing.sendMsg(makeMsg(["status","plugins","cmds", "activate","deactivate",
                                          "alerters","plugid","alertid","var","cvar","help"],
                                 source,dest))
             elif action.getValue() == "plugins":
@@ -143,6 +143,10 @@ class SmtgDaemon(RDaemon):
             elif action.getValue() == "cvar":pass #TODO: implement cvar to change variables
             elif action.getValue() == "help": self.__help(dest, msg.get("args"))
             
+            elif action.getValue() == "activate":
+                pass #TODO: implement activate command to activate inactive plugins/alerters
+            elif action.getValue() == "deactivate":
+                pass #TODO: implement deactivate command to deactivate active plugins/alerters
             # the command does not exist.
             else: routing.sendMsg(makeErrorMsg("invalid action",source,dest))
         elif action.getType() == ERROR_MSG_TYPE:
