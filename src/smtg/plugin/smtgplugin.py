@@ -86,11 +86,9 @@ class LoopPlugin(SmtgPlugin):
     def __init__(self, conf, importance=MID_IMPORTANCE):
         SmtgPlugin.__init__(self, conf)
         self.update_importance = importance
-        for key,value in self.config:
-            if key == "importance":
-                try:self.update_importance=int(value)
-                except: self.update_importance=importance
-                break
+        if "importance" in self.config:
+            try:self.update_importance=int(self.config["importance"])
+            except: self.update_importance=importance
 
     def change_importance(self, importance):
         if importance <= HIGH_IMPORTANCE and importance >= LOW_IMPORTANCE:  
@@ -118,11 +116,9 @@ class SignalPlugin(SmtgPlugin):
     def __init__(self, conf, auto_start=False):
         SmtgPlugin.__init__(self, conf)
         self.autostart = auto_start
-        for key,value in self.config:
-            if key == "autostart":
-                try:self.autostart=bool(value)
-                except:self.autostart=auto_start
-                break
+        if "autostart" in self.config:
+            try:self.autostart=int(self.config["autostart"])
+            except: self.autostart=auto_start
 
     def _run(self, *args):
         """Signal Plug-ins get their own threads! This is the method that

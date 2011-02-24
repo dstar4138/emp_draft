@@ -86,7 +86,7 @@ class SmtgConfigParser(ConfigParser):
         
         #adjust plugin name to compensate for cfg file
         plugin_name="plugin_"+plugin_name
-        try: return self.items(plugin_name)
+        try: return dict(self.items(plugin_name))
         except: return None
         
     
@@ -99,7 +99,7 @@ class SmtgConfigParser(ConfigParser):
         
         #adjust alerter name to compensate for cfg file
         alerter_name="alerter_"+alerter_name
-        try: return self.items(alerter_name)
+        try: return dict(self.items(alerter_name))
         except: return None
     
     def defaultAttachmentVars(self, name, defaults, category):
@@ -115,6 +115,7 @@ class SmtgConfigParser(ConfigParser):
                 self.set(section, option, defaults[option])
     
     def save(self, plugins, alerters):
+        #XXX: rewrite to conserve comments in the config file if there are any.
         """ Save the configurations to the local user's configuration. """
         if writeto_cfg_file is not None:
             # update the plug-in variables before saving.
@@ -122,8 +123,8 @@ class SmtgConfigParser(ConfigParser):
                 try:
                     plugin.plugin_object._save() #make the plugin save before pulling the configs
                     
-                    for key,value in plugin.plugin_object.config:
-                        self.set("plugin_"+plugin.plugname,key,value)
+                    for key in plugin.plugin_object.config.keys():
+                        self.set("plugin_"+plugin.plugname,key,plugin.plugin_object.config[key])
                         
                     if hasattr(plugin.plugin_object, "autostart"): #its a SignalPlugin
                         self.set("plugin_"+plugin.plugname,
@@ -139,8 +140,8 @@ class SmtgConfigParser(ConfigParser):
             for alerter in alerters:
                 try:
                     alerter.plugin_object._save() #make the plugin save before pulling the configs
-                    for key,value in alerter.plugin_object.config:
-                        self.set("alerter_"+alerter.plugname, str(key), str(value))
+                    for key in alerter.plugin_object.config.keys():
+                        self.set("alerter_"+alerter.plugname, str(key), str(alerter.plugin_object.config[key]))
                 except Exception as e:
                     logging.exception(e)
             

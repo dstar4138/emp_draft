@@ -35,14 +35,13 @@ class FileWatcher(LoopPlugin):
     def __init__(self, conf):
         LoopPlugin.__init__(self, conf)
         self._files = {}
-        for key,value in self.config:
-            if key == "files":
-                if value == "": break
-                for file in str(value).split(","):
+        if "files" in self.config:
+            if self.config["files"] != "": 
+                for file in str(self.config["files"]).split(","):
                     try: self._files[file] = os.path.getmtime(file)
                     except Exception as e:
                         logging.error("%s had an error getting the file time" % e)
-                break
+                        break
         self._commands =["help","update","status","files","add","rm"]
     
     def _handle_msg(self, msg):
@@ -119,4 +118,11 @@ class FileWatcher(LoopPlugin):
 
     def _save(self):
         """Pushes the internal variables to the config variable for saving! """
-        pass
+        filestring = ""
+        count = len(self._files.keys())
+        for file in self._files.keys():
+            filestring+=file
+            count-=1
+            if count>0:filestring+=","
+        self.config["files"] = filestring
+
