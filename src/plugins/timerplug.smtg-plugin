@@ -1,0 +1,16 @@
+[Core]
+Name = Timer Plugin
+Module = TimerPlug
+Cmd = timer
+
+[Documentation]
+Description = This plugin can run and keep track of timers, and send alerts when they are done!
+Author = Alexander Dean
+Version = 0.1
+Website = dstar4138.com
+Copyright = Apache v2
+
+[Defaults]
+port = 8081
+maxrand = 360
+minrand = 20

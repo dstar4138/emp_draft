@@ -35,9 +35,6 @@ class TwitPlug(LoopPlugin):
         
     def _handle_msg(self, msg):
         pass
-
-    def _check_status(self):
-        pass
         
     def _get_commands(self):
         return TWITTER

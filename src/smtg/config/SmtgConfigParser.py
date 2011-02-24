@@ -77,30 +77,21 @@ class SmtgConfigParser(ConfigParser):
             
         
         
-    def getPluginVars(self, plugin_name):
+    def getAttachmentVars(self, name):
         """A quick function to return the plugin's variables from the 
         configuration files.
         """
-        if type(plugin_name) != str: 
+        if type(name) != str: 
             raise TypeError("Plugin Name must be a string")
         
         #adjust plugin name to compensate for cfg file
-        plugin_name="plugin_"+plugin_name
+        plugin_name="plugin_"+name
         try: return dict(self.items(plugin_name))
-        except: return None
+        except:
+            alerter_name="alerter_"+name
+            try: return dict(self.items(alerter_name))
+            except: return None
         
-    
-    def getAlerterVars(self, alerter_name):
-        """A quick function to return the alerter's variables from the 
-        configuration files.
-        """
-        if type(alerter_name) != str: 
-            raise TypeError("Alerter Name must be a string")
-        
-        #adjust alerter name to compensate for cfg file
-        alerter_name="alerter_"+alerter_name
-        try: return dict(self.items(alerter_name))
-        except: return None
     
     def defaultAttachmentVars(self, name, defaults, category):
         """Called by SmtgPluginManager and SmtgAlertManager to load the default

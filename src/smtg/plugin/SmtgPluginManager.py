@@ -69,8 +69,7 @@ class SmtgPluginManager(VariablePluginManager):
 
     def getSignalPlugins(self):
         """ Utility function for getting all the signal plugins. """
-        return sorted( self.getPluginsOfCategory("Signals"),
-                       key=lambda x: x.plugin_object.update_importance)
+        return self.getPluginsOfCategory("Signals")
 
     def getPluginNames(self):
         """ Get all the names of the plug-ins."""

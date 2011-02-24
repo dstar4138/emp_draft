@@ -95,7 +95,8 @@ class DefaultPluginManager(PluginManager):
                 exec(open(candidate_filepath+".py","rb").read(), candidate_globals)
             except Exception as e:
                 logging.debug("Unable to execute the code in plugin: %s" % candidate_filepath)
-                logging.debug("\t The following problem occured: %s %s " % (os.linesep, e))
+                #logging.debug("\t The following problem occured: %s %s " % (os.linesep, e))
+                logging.exception(e)
                 if "__init__" in  os.path.basename(candidate_filepath):
                     sys.path.remove(plugin_info.path)
                 continue
@@ -118,7 +119,7 @@ class DefaultPluginManager(PluginManager):
                     if not (candidate_infofile in self._category_file_mapping[current_category]): 
                         # we found a new plugin: initialise it and search for the next one
                         self.config.defaultAttachmentVars(plugin_info.plugname, plugin_info.defaults, current_category)
-                        plugin_info.plugin_object = element(self.config.getPluginVars(plugin_info.plugname))
+                        plugin_info.plugin_object = element(self.config.getAttachmentVars(plugin_info.plugname))
                         plugin_info.category = current_category
                         
                         #now we will register the plugin with the router

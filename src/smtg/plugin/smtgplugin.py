@@ -54,15 +54,7 @@ class SmtgPlugin(IPlugin, Routee):
         a message from somewhere. This is here just to remind you that you
         NEED to implement it.
         """
-        raise NotImplementedError("_handle_msg() not implemented")
-
-    def _check_status(self):
-        """Checks the status of the plug-in. This may mean to check if a 
-        web-site is down, or if the connection is lost. Should return a 
-        boolean. True means that the plug-in means that it is running,
-        False if otherwise. 
-        """
-        raise NotImplementedError("_check_status() not implemented")  
+        raise NotImplementedError("_handle_msg() not implemented") 
         
     def _get_commands(self):
         """Returns a dict object of the commands, the name to the description.
@@ -119,6 +111,7 @@ class SignalPlugin(SmtgPlugin):
     def __init__(self, conf, auto_start=False):
         SmtgPlugin.__init__(self, conf)
         self.autostart = auto_start
+        self.running = False
         if "autostart" in self.config:
             try:self.autostart=int(self.config["autostart"])
             except: self.autostart=auto_start
@@ -131,5 +124,8 @@ class SignalPlugin(SmtgPlugin):
         """
         raise NotImplementedError("_run() not implemented")
 
-
-
+    def _stop(self):
+        """ When running, your daemon should listen to this variable and close
+        when it is false. Make sure that you change it to true, right before 
+        you start running."""
+        self.running = False

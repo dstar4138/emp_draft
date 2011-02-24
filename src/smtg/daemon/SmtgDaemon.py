@@ -252,7 +252,7 @@ class SmtgDaemon(RDaemon):
     
             #start all the singal threads that require an autostart which are activated
             for signal in self.pman.getSignalPlugins():
-                if signal.is_activated and signal.autostart:
+                if signal.is_activated and signal.plugin_object.autostart:
                     Thread(target=signal._run).start()
     
             # start the pull loop.
@@ -263,7 +263,7 @@ class SmtgDaemon(RDaemon):
                 activePlugins = self.pman.getLoopPlugins()
                 if activePlugins:
                     for plugin in activePlugins:
-                        if plugin.is_activated:
+                        if plugin.plugin_object.is_activated:
                             # for each active feed run the update function with no
                             # arguments. The only time arguments are needed 
                             # is if the plug-in was force updated by a command.
@@ -281,6 +281,11 @@ class SmtgDaemon(RDaemon):
                         if not self.isRunning(): break;
                 except: pass
                 
+            #Stop all signal threads
+            for signal in self.pman.getSignalPlugins():
+                signal.plugin_object._stop()    
+            
+            #flush the router, and save all configurations.
             routing.flush()
             self.config.save( self.pman.getAllPlugins(), 
                               self.aman.getAllPlugins() )
