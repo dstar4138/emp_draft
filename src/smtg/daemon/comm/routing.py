@@ -17,6 +17,7 @@ import queue
 import random
 import logging
 from threading import Thread
+from smtg.alert.smtgalert import Alerter
 from smtg.daemon.comm.messages import strToMessage, makeMsg, ALERT_MSG_TYPE
 
 
@@ -120,12 +121,13 @@ def startRouter(base=None, triggermethod=lambda:False):
             elif msg.getDestination() == "" or msg.getDestination() == None:
                 
                 # Check if the message type is an alert, if it is, then send it
-                # to EVERYONE! 
+                # to all interfaces and alerters
                 if msg.getType() == ALERT_MSG_TYPE:
                     for id in list( _registration.keys()):
                         logging.debug("sending message to %s: %s"% (id, msg))
                         _,ref = _registration.get(id)
-                        Thread(target=ref._handle_msg, args=(msg,)).start()
+                        if isinstance(ref, Interface) or isinstance(ref, Alerter):
+                            Thread(target=ref._handle_msg, args=(msg,)).start()
                         
                 # if not send it to the daemon to handle.
                 else:
