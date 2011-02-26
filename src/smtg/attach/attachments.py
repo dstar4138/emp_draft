@@ -33,12 +33,6 @@ from smtg.comm.routing import Routee
 LOW_IMPORTANCE  = 100
 MID_IMPORTANCE  = 50
 HIGH_IMPORTANCE = 0
-BOOL_CHOICES = {"0":False,"1":True,"no":False,"yes":True,"true":True,
-                "false":False,"on":True,"off":False, "":False}
-def boolme(res):
-    if res in BOOL_CHOICES: 
-        return BOOL_CHOICES[res]
-    else: return False
 
 class SmtgPlugin(IPlugin, Routee):
     """The base of all plug-ins for the SMTG platform. Please do not use
@@ -49,10 +43,7 @@ class SmtgPlugin(IPlugin, Routee):
     def __init__(self, conf):
         self.config = conf
         IPlugin.__init__(self)
-        if "makeactive" in self.config:
-            self.makeactive = boolme(self.config["makeactive"])
-        else:
-            self.makeactive = True
+        self.makeactive = self.config.getboolean("makeactive",True)
         
     def handle_msg(self, msg):
         """ Inherited from Routee, this is what runs when the Plug-in gets
@@ -74,7 +65,7 @@ class SmtgPlugin(IPlugin, Routee):
         this function so the plug-in/alerter can wrap things up and save what
         it needs to in the self.config variable.
         """
-        self.config["makeactive"] = self.makeactive
+        self.config.set("makeactive", self.makeactive)
 
 
 class LoopPlugin(SmtgPlugin):
@@ -85,10 +76,7 @@ class LoopPlugin(SmtgPlugin):
     """
     def __init__(self, conf, importance=MID_IMPORTANCE):
         SmtgPlugin.__init__(self, conf)
-        self.update_importance = importance
-        if "importance" in self.config:
-            try:self.update_importance=int(self.config["importance"])
-            except: self.update_importance=importance
+        self.update_importance=self.config.getint("importance",importance)
 
     def change_importance(self, importance):
         if importance <= HIGH_IMPORTANCE and importance >= LOW_IMPORTANCE:  

@@ -20,7 +20,7 @@ from smtg.config.defaults import default_configs, default_cfg_files, writeto_cfg
 
 CATEGORY_MAP = {"Loops":"plugin_",
                 "Signals":"plugin_",
-                "Alerts":"alerter_"}
+                "Alerters":"alerter_"}
 
 class SmtgConfigParser(ConfigParser):
     """At its heart, this config parser is a SafeConfigParser. The
@@ -79,19 +79,19 @@ class SmtgConfigParser(ConfigParser):
         
         
     def getAttachmentVars(self, name):
-        """A quick function to return the plugin's variables from the 
-        configuration files.
+        """Returns a TinyCfgPrsr of the attachment's variables that were in 
+        saved to smtg's config file. TinyCfgPrsr provides some utility functions
+        for retrieving the types of variable that were stored there.
         """
-        if type(name) != str: 
+        if type(name) is not str: 
             raise TypeError("Plugin Name must be a string")
         
-        #adjust plugin name to compensate for cfg file
-        plugin_name="plugin_"+name
-        try: return dict(self.items(plugin_name))
+        attach_name="plugin_"+name
+        try: return TinyCfgPrsr(dict(self.items(attach_name)))
         except:
-            alerter_name="alerter_"+name
-            try: return dict(self.items(alerter_name))
-            except: return None
+            attach_name="alerter_"+name
+            try: return TinyCfgPrsr(dict(self.items(attach_name)))
+            except: return TinyCfgPrsr({})
         
     
     def defaultAttachmentVars(self, name, defaults, category):
@@ -120,7 +120,7 @@ class SmtgConfigParser(ConfigParser):
                             self.set("alerter_"+attach.plugname, str(key), str(attach.plugin_object.config[key]))
                     else:
                         for key in attach.plugin_object.config.keys():
-                            self.set("plugin_"+attach.plugname,key,attach.plugin_object.config[key])
+                            self.set("plugin_"+attach.plugname,key,str(attach.plugin_object.config[key]))
                         #else, it doesn't matter 
                 except Exception as e: 
                     logging.exception(e)
@@ -129,5 +129,54 @@ class SmtgConfigParser(ConfigParser):
             if self.__try_setup_path(writeto_cfg_file):
                 self.write(open(writeto_cfg_file, mode="w"))
             
+
+BOOL_CHOICES = {"0":False,"1":True,"no":False,"yes":True,"true":True,
+                "false":False,"on":True,"off":False, "":False}
+
+
+class TinyCfgPrsr():
+    """ A Utility class to make handling configuration variables easier for
+    attachment construction. They mimic the functionality of a standard 
+    config parser, but minus a lot of un-needed functions and variables. It
+    also just holds one section as a dictionary.
+    """
+    def __init__(self,dictionary):
+        self._value = dictionary
     
+    def keys(self):
+        return list(self._value.keys())
+    
+    def __getitem__(self, i):
+        return self.get(i,None)
+    
+    def get(self, option, default):
+        if option in self._value:
+            return self._value[option]
+        else: return default
+    
+    def getint(self, option, default):
+        if option in self._value:
+            return int(self._value[option])
+        else: return default
+
+    def getfloat(self, option,default):
+        if option in self._value:
+            return float(self._value[option])
+        else: return default
+
+    def getlist(self, option, default):
+        if option in self._value and self._value[option] != '':
+            return self._value[option].split(',')
+        else: return default
+    
+    def getboolean(self, option, default):
+        if option in self._value:
+            res=self._value[option].lower()
+            if res in BOOL_CHOICES:
+                return BOOL_CHOICES[res]
+            else: return False
+        else: return default
+    
+    def set(self, option, value):
+        self._value[option] = value
     

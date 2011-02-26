@@ -220,7 +220,8 @@ class SmtgDaemon(RDaemon):
         """
         try:
             # load the plug-in manager now and search for the plug-ins.
-            self.aman = AttachmentManager(smtgconf.default_plugin_dirs, self.config)
+            self.aman = AttachmentManager(smtgconf.attachment_dirs, 
+                                          self.config)
             self.aman.collectPlugins()
             
             #activates the attachments based on user cfg file. 

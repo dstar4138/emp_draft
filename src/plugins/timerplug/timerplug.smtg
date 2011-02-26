@@ -12,5 +12,5 @@ Copyright = Apache v2
 
 [Defaults]
 port = 8081
-maxrand = 360
+maxrand = 3600
 minrand = 20

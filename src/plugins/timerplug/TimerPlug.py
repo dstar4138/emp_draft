@@ -15,7 +15,7 @@ limitations under the License.
 import random
 import logging
 from socket import timeout
-from threading import Timer
+from plugins.timerplug.mytimer import MyTimer
 
 import smtg.comm.routing as routing
 from smtg.attach.attachments import SignalPlugin
@@ -26,15 +26,19 @@ DEFAULT_PORT = 8081
 DEFAULT_MAXRAND = 360
 DEFAULT_MINRAND = 20
 
+LOWEST_RAND = 1
 
+# See the readme for more information on these commands.
 TIMER = {"status": "Returns the status of a given timer, or all of them.",
-         "add"   : "Add a timer for the specified amount of time in seconds.",
-         "stop"  : "Stops the running server, and kills all timers/connections",
-         "rm"    : "Remove a timer by its id",
+         "timers" : "Return a printout of the timers' status.",
+         "kill"  : "Stops all timers/connections",
+         "stopall" : "Stops all timers!",
+         "closeall" : "Closes all open connections.",
+         "rm"    : "Remove a timer by its index",
          "arand" : "Add a timer for a random amount of time between two numbers.",
-         "time"  : "Set a timer to go off at a given time in the form: 'hh:mm pm/am'",
-         "port"  : "Get the port to connect to on the current host that the alert msg will signal down."}
-
+         "port"  : "Get the port to connect to on the current host that the alert msg will signal down.",
+         "add"   : "Add with three variables, first is seconds, second is minutes, third is hours."}
+    
 class TimerPlug(SignalPlugin):
     """The Timer plug-in will be the most simplistic SignalPlugin. It will
     create a timer in accordance with the time you need, and then send an 
@@ -46,25 +50,14 @@ class TimerPlug(SignalPlugin):
         SignalPlugin.__init__(self,conf, autostart=False) #force no autostart
         self._timers = []
         self._connections = []
-        self._port = DEFAULT_PORT
         self.running = False
-        if "port" in self.config:
-            try: self._port =  int(self.config["port"])
-            except: self._port = DEFAULT_PORT
-            
-        self._maxrand = DEFAULT_MAXRAND 
-        if "maxrand" in self.config:
-            try: 
-                self._maxrand =  int(self.config["maxrand"])
-                if self._maxrand < 1: raise
-            except: self._maxrand = DEFAULT_MAXRAND
-            
-        self._minrand = DEFAULT_MINRAND
-        if "minrand" in self.config:
-            try: 
-                self._minrand =  int(self.config["minrand"])
-                if self._minrand < 1: raise
-            except: self._minrand = DEFAULT_MINRAND
+
+        self._port = self.config.getint("port", DEFAULT_PORT)
+        self._maxrand = max(self.config.getint("maxrand", DEFAULT_MAXRAND), LOWEST_RAND)
+        self._minrand = max(self.config.getint("minrand", DEFAULT_MINRAND), LOWEST_RAND)
+        
+        if self._maxrand < self._minrand:
+            self._maxrand , self._minrand = self._minrand, self._maxrand 
             
         self._socket = DaemonServerSocket(port=self._port)
         #TODO: get these other settings working.
@@ -76,10 +69,9 @@ class TimerPlug(SignalPlugin):
     def save(self):
         """ Save my internal configuration."""
         SignalPlugin.save(self)
-        self.config["port"] = self._port
-        self.config["maxrand"] = self._maxrand
-        self.config["minrand"] = self._minrand
-        
+        self.config.set("port", self._port)
+        self.config.set("maxrand", self._maxrand)
+        self.config.set("minrand", self._minrand)
         
     def get_commands(self):
         """ Returns the command dictionary! """
@@ -91,9 +83,7 @@ class TimerPlug(SignalPlugin):
             
             #since its a command, lets handle it.
             dest = msg.getSource()
-            if msg.getValue() == "add":
-                self.addtimer(int(msg.get("args")[0]), dest)
-            elif msg.getValue() == "rm":
+            if msg.getValue() == "rm":
                 self.removetimer(int(msg.get("args")[0]), dest)
             elif msg.getValue() == "arand":
                 if len(msg.get("args")) == 1: #set min=args
@@ -105,26 +95,43 @@ class TimerPlug(SignalPlugin):
                 elif len(msg.get("args")) ==2: #set both max and min
                     min = int(msg.get("args")[0])
                     max = int(msg.get("args")[1])
-                    if min < 1 or max <1:
-                        routing.sendMsg(makeErrorMsg("Value given for arand must be larger than 1.", self.ID,dest))
-                    elif max > min:
-                        t=min
-                        max=min
-                        min=t
+                    if min < LOWEST_RAND or max < LOWEST_RAND:
+                        routing.sendMsg(makeErrorMsg("Value given for arand must be larger than "+str(LOWEST_RAND), self.ID,dest))
+                        
+                    #if max and min are switched, then swap them before testing.
+                    elif max > min: max, min = min, max
+                    
                     self.addtimer(random.randint(min, max), dest)
                 else: #use the variables from the config file
                     self.addtimer(random.randint(self._minrand, self._maxrand), dest)
             elif msg.getValue() == "status":
                 routing.sendMsg(makeMsg("There are "+str(len(self._timers))+" timers running.",self.ID,dest))
+                
             elif msg.getValue() == "port":
                 routing.sendMsg(makeMsg(self._port,self.ID,dest))
                 
-            elif msg.getValue() == "stop": 
-                self.stop()
+            elif msg.getValue() == "kill":     self.deactivate()
+            elif msg.getValue() == "closeall": self.killconnections()
+            elif msg.getValue() == "stopall":  self.killtimers()
+            elif msg.getValue() == "add":
+                args = msg.get("args")
+                seconds = 0
+                if len(args) == 3: #hours
+                    seconds += int(args[2])*3600
+                    
+                if len(args) == 2:#minutes
+                    seconds += int(args[1])*60
+                    
+                seconds += int(args[0]) #seconds
+                self.addtimer(seconds, dest)
                 
-            elif msg.getValue() == "time":
-                #TODO: add this functionality
-                routing.sendMsg(makeErrorMsg("Action not implemented yet. Sorry!", self.ID,dest))
+            elif msg.getValue() == "timers":
+                timers = []
+                for timer in self._timers:
+                    timers.append({"Created":timer.getTimeCreated(),
+                                   "Ends":timer.getTimeToEnd()})
+                routing.sendMsg(makeMsg(timers,self.ID,dest))
+                
             else:
                 routing.sendMsg(makeErrorMsg("Invalid action", self.ID,dest))
             
@@ -135,7 +142,7 @@ class TimerPlug(SignalPlugin):
     def addtimer(self, seconds, dest):
         """ Adds a timer, and starts the SingalPlugin if needed."""
         try:
-            t = Timer(seconds,self.sendSignal)
+            t = MyTimer(seconds,self.sendSignal)
             t.start()
             self._timers.append(t)
             self.activate() #starts the run thread if its not already running
@@ -153,13 +160,13 @@ class TimerPlug(SignalPlugin):
         except:
             routing.sendMsg(makeErrorMsg("Couldn't removed timer!",self.ID,dest))
     
-    def sendSignal(self):
+    def sendSignal(self, timer):
         alert = makeAlertMsg("Timer went off!!",self.ID)
         for conn in self._connections:
             try:conn.send(alert)
             except:pass
         routing.sendMsg(alert)
-        self._timers = list(filter(lambda a: not a.finished.is_set(), self._timers))
+        self._timers = list(filter(lambda a: not a.isfinished(), self._timers))
             
     def killconnections(self):
         """ Close all open connections. """
@@ -167,11 +174,18 @@ class TimerPlug(SignalPlugin):
             try:conn.close()
             except:pass
         self._connections=[]
-                             
+
+    def killtimers(self):
+        """ Cancels all running timers! """
+        for timer in self._timers: timer.cancel()
+        self._timers = []
+        
+             
     def deactivate(self):
         """ stops all connections and the server. """
         SignalPlugin.deactivate(self)
         self.killconnections()
+        self.killtimers()
                  
                 
     def run(self):

@@ -23,11 +23,6 @@ from yapsy.PluginManager import PluginManager
 from yapsy.FilteredPluginManager import FilteredPluginManager
 
 
-BOOL_CHOICES = {"0":False,"1":True,"no":False,"yes":True,"true":True,
-                "false":False,"on":True,"off":False, "":False}
-
-
-
 class SmtgPluginInfo(PluginInfo):
     def __init__(self, plugin_name, plugin_path):
         self.defaults = {}
@@ -138,28 +133,26 @@ class DefaultPluginManager(PluginManager):
                         attachmentVars = self.config.getAttachmentVars(plugin_info.plugname)
                         
                         # check that the plugin is actually wanting to be loaded.
-                        if "load" not in attachmentVars or self.__boolme(attachmentVars["load"]):
-                            
-                            plugin_info.plugin_object = element(attachmentVars)
-                            plugin_info.category = current_category
-                            
-                            #now we will register the plugin with the router
-                            routing.register(plugin_info.plugname, plugin_info.plugin_object)
-                            
-                            self.category_mapping[current_category].append(plugin_info)
-                            self._category_file_mapping[current_category].append(candidate_infofile)
-                            current_category = None
+                        if attachmentVars.getboolean("load", True):
+                            try:
+                                plugin_info.plugin_object = element(attachmentVars)
+                                plugin_info.category = current_category
+                                
+                                #now we will register the plugin with the router
+                                routing.register(plugin_info.plugname, plugin_info.plugin_object)
+                                
+                                self.category_mapping[current_category].append(plugin_info)
+                                self._category_file_mapping[current_category].append(candidate_infofile)
+                                current_category = None
+                            except Exception as e:
+                                if attachmentVars.getboolean("require", False):#killme!!
+                                    logging.exception(e)
+                                    sys.exit(1)
                     break
 
         # Remove candidates list since we don't need them any more and
         # don't need to take up the space
         delattr(self, '_candidates')      
-        
-    def __boolme(self,res):
-        if res in BOOL_CHOICES:
-            self.autostart=BOOL_CHOICES[res]
-        else:
-            self.autostart=False
             
     def gatherBasicPluginInfo(self, directory, filename):
         plugin_info,config_parser = self._gatherCorePluginInfo(directory, filename)

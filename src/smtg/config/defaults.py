@@ -23,6 +23,8 @@ import sys, os
 # the platform you are running on!
 CUR_PLATFORM = sys.platform
 
+# OVERRIDE DEBUG MODE?
+DEBUG_MODE = True
 
 #
 # This is included as the default configuration for the config parser.
@@ -117,6 +119,12 @@ elif CUR_PLATFORM.find("darwin")!=-1: # Mac OSX
     pass
 else:  # the poor souls not using one of the above. :(
     logging.warning("Could not determine current operating system.")
+
+
+#Set up the attachments directories!
+attachment_dirs = default_plugin_dirs + default_alerter_dirs
+#set the debug mode variable if its internally set!
+if DEBUG_MODE: default_configs["Logging"]["debug-mode"]="true"
 
 ############## ALT MAIN TO TEST ######################
 #if __name__ == "__main__":

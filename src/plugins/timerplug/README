@@ -1,0 +1,94 @@
+The Timer Plug-in:
+==================
+
+  The timer plug-in, is an example of a SignalPlugin. It demonstrates two 
+important things. How to use a internal directory structure for your 
+attachments, and how to write a SignalPlugin the correct way.
+
+
+Attachment Commands:
+--------------------
+
+  The timer plug-in has several commands that are quite useful if you want to
+make timed alerts for yourself. An example might be if you put your clothes in
+the washer and you want to make sure you are reminded when to put them in the
+drier. The following is a complete listing of the commands for the timer 
+plug-in attachment:
+
+status    Returns the status of the TimerPlug as a string. It contains a count
+		  of the number of timers currently running.
+		  
+timers    Returns a list of dictionaries with two keys 'Created', and 'Ends'. 
+		  These represent when each of the timers were created and when they
+		  end.
+		 
+add		  Add with three variables, first is seconds, second is minutes, third 
+		  is hours. Eg. 'add 0 30 2' computes to a timer that will go off in 
+		  two and a half hours. If you just want a timer to go off in 2 minutes
+		  you can do one of the two commands 'add 120' or 'add 0 2'.
+		  
+kill	  Stops the all running timers and deactivates the TimerPlug.
+
+closeall  Closes all open connections to the TimerPlug.
+
+stopall   Stops all running timers.
+
+rm		  Remove a timer by its index in a list. (See 'timers' command.)
+
+arand	  Add a timer for a random amount of time between two numbers. If only 
+		  one number is given then it will act as the minimum the random number
+		  can be. If no numbers are given, then it will take both the max and 
+		  min from the configuration file. See 'maxrand' and 'minrand' 
+		  variables.
+		  
+port	  Get the port to connect to on the current host that the alert msg 
+		  will signal down
+         
+         
+CFG Variables:
+--------------
+
+The configuration file has 3 variables:
+
+port	  This is the port number the SignalPlugin will bind to to send 
+		  alternate alert messages down. (It will also send it to the other
+		  interfaces and Alerters connected, but that takes longer, if you
+		  connect to the port you will get it INSTANTLY!). The port defaults to
+		  port 8081.
+		  
+maxrand   This is the maximum random number that the 'arand' function will use
+		  as its range. The default is 3600, which equates to 1 hour.*
+		
+minrand   This is the minimum random number that the 'arand' function will use
+		  as its range. The default is 20, which equates to 20 seconds.*
+		  		  
+	*The two random numbers can not be lower than 1, and the max if lower than
+	 min, will be swapped automatically.
+
+
+
+There is one variables that is automatically added by SMTG:
+
+makeactive  This is added to auto-activate the SignalPlugin, but since the timer
+			plug-in automatically purges all active timers when it closes, it 
+			forces this to be false. This is can not be reset. So ignore it.
+
+
+Three variables that can be added by you and the daemon understands (standard 
+for all attachments though):
+
+load	   This is a boolean variable that the daemon checks to see whether it
+		   should even load it into the system. If this is false, then it will 
+		   be ignored and forgotten. This is helpful if the TimerPlug is never 
+		   used by you, and you want to hide it from being loaded. 
+
+require    This tells SMTG that if the attachment has trouble loading and can't
+		   be loaded, then don't bother starting. It requires that the 
+		   attachment work before for SMTG will.
+
+
+Questions:
+----------
+
+If you have any questions, please feel free to send me a question via my 
+website: dstar4138.com
