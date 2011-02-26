@@ -26,5 +26,5 @@ class LogWatcher(FileWatcher):
     def __init__(self, conf):
         FileWatcher.__init__(self, conf)
         
-    def _save(self):
-        FileWatcher._save(self)
+    def save(self):
+        FileWatcher.save(self)

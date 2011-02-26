@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License. 
 """
 
-from smtg.alert.smtgalert import Alerter
+from smtg.attach.attachments import Alerter
 
 class EmailAlerter(Alerter):
     """ Sends an email upon getting an Alert."""
@@ -22,9 +22,9 @@ class EmailAlerter(Alerter):
         """Sets up the alerter."""
         Alerter.__init__(self, conf)
         
-    def _handle_msg(self, msg):
+    def handle_msg(self, msg):
         """ """
         pass
     
-    def _alert(self, args):
+    def alert(self, args):
         pass

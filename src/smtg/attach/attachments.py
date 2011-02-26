@@ -22,9 +22,9 @@ limitations under the License.
 #
 __version__="0.8"
 
-
+from threading import Thread
 from yapsy.IPlugin import IPlugin
-from smtg.daemon.comm.routing import Routee
+from smtg.comm.routing import Routee
 
 # Importance changes its location in the list of updates.
 #   The lower the number the closer to the beginning it is. You can
@@ -33,43 +33,48 @@ from smtg.daemon.comm.routing import Routee
 LOW_IMPORTANCE  = 100
 MID_IMPORTANCE  = 50
 HIGH_IMPORTANCE = 0
-
+BOOL_CHOICES = {"0":False,"1":True,"no":False,"yes":True,"true":True,
+                "false":False,"on":True,"off":False, "":False}
+def boolme(res):
+    if res in BOOL_CHOICES: 
+        return BOOL_CHOICES[res]
+    else: return False
 
 class SmtgPlugin(IPlugin, Routee):
     """The base of all plug-ins for the SMTG platform. Please do not use
     this as your interface. Use either LoopPlugin, or SignalPlugin as your
     interface for your new plug-in since SMTG separates it's internals
-    based on those. In ALL plug-ins you must override any method with a
-    '_' in front of it. Such as the ones listed below.
+    based on those.
     """
     def __init__(self, conf):
         self.config = conf
         IPlugin.__init__(self)
-        if "activate" in self.config:
-            try: self.is_activated = bool(self.config["activate"])
-            except: pass
+        if "makeactive" in self.config:
+            self.makeactive = boolme(self.config["makeactive"])
+        else:
+            self.makeactive = True
         
-    def _handle_msg(self, msg):
+    def handle_msg(self, msg):
         """ Inherited from Routee, this is what runs when the Plug-in gets
         a message from somewhere. This is here just to remind you that you
         NEED to implement it.
         """
-        raise NotImplementedError("_handle_msg() not implemented") 
+        raise NotImplementedError("handle_msg() not implemented") 
         
-    def _get_commands(self):
+    def get_commands(self):
         """Returns a dict object of the commands, the name to the description.
         This is used by SMTG to update its help screen, it can also be asked
         for by sending a command to the daemon for all possible commands.
         """
-        raise NotImplementedError("_get_commands() not implemented")
+        raise NotImplementedError("get_commands() not implemented")
 
-    def _save(self):
+    def save(self):
         """ When closing, SMTG will grab SmtgPlugin.config and push it back 
         to the user's configuration file. So before that point it will call 
         this function so the plug-in/alerter can wrap things up and save what
         it needs to in the self.config variable.
         """
-        self.config["activate"] = self.is_activated
+        self.config["makeactive"] = self.makeactive
 
 
 class LoopPlugin(SmtgPlugin):
@@ -89,11 +94,11 @@ class LoopPlugin(SmtgPlugin):
         if importance <= HIGH_IMPORTANCE and importance >= LOW_IMPORTANCE:  
             self.update_importance = importance
        
-    def _update(self, *args):
+    def update(self, *args):
         """This is the method that gets run every pull loop. Any updating
         processes that need to get done, need to get run in this method.
         """
-        raise NotImplementedError("_update() not implemented") 
+        raise NotImplementedError("update() not implemented") 
 
 
 class SignalPlugin(SmtgPlugin): 
@@ -105,27 +110,38 @@ class SignalPlugin(SmtgPlugin):
     Please use this method of plug-ins sparingly. Since it creates its
     own thread, it adds more work on the clients computer than needed.
     If you NEED this method for your plug-in, at least make it benign
-    until it's hand-launched by the user. To do this: set auto_start
-    to False.
+    until it's hand-launched by the user. 
     """
-    def __init__(self, conf, auto_start=False):
+    def __init__(self, conf, autostart=None):
         SmtgPlugin.__init__(self, conf)
-        self.autostart = auto_start
-        self.running = False
-        if "autostart" in self.config:
-            try:self.autostart=int(self.config["autostart"])
-            except: self.autostart=auto_start
-
-    def _run(self):
-        """Signal Plug-ins get their own threads! This is the method that
-        gets run when the plug-in is loaded into the daemon. When this 
-        method returns the Plug-in is put into a waiting area until 
-        hand-triggered.
+        if autostart is not None and autostart:
+            self.makeactive = autostart
+    
+    def activate(self):
+        """ When the SignalPlugins are activated, they throw the run function
+        into a new thread.
         """
-        raise NotImplementedError("_run() not implemented")
+        if not self.is_activated:
+            self.is_activated = True
+            Thread(target=self.run).start()
+    
+    def run(self):
+        """Signal Plug-ins get their own threads! This is the function that 
+        needs to be overwritten by the subclass.
+        """
+        raise NotImplementedError("run() not implemented")
 
-    def _stop(self):
-        """ When running, your daemon should listen to this variable and close
-        when it is false. Make sure that you change it to true, right before 
-        you start running."""
-        self.running = False
+
+class Alerter(SmtgPlugin):
+    """This is the base method of alerting. """
+    
+    def __init__(self, conf):
+        """ Create the foundation of an alert with a dictionary of internal 
+        variables, passed to it via the daemon/AlertManager.
+        """
+        SmtgPlugin.__init__(self, conf)
+    
+    def alert(self, *args):
+        """ Runs the alert process. This is the core of an alert. """
+        raise NotImplementedError("alert() not implemented")
+    

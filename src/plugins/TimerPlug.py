@@ -15,12 +15,12 @@ limitations under the License.
 import random
 import logging
 from socket import timeout
-from threading import Thread, Timer
+from threading import Timer
 
-import smtg.daemon.comm.routing as routing
-from smtg.plugin.smtgplugin import SignalPlugin
+import smtg.comm.routing as routing
+from smtg.attach.attachments import SignalPlugin
 from smtg.daemon.daemonipc import DaemonServerSocket
-from smtg.daemon.comm.messages import COMMAND_MSG_TYPE, makeErrorMsg, makeMsg, makeAlertMsg
+from smtg.comm.messages import COMMAND_MSG_TYPE, makeErrorMsg, makeMsg, makeAlertMsg
 
 DEFAULT_PORT = 8081
 DEFAULT_MAXRAND = 360
@@ -43,7 +43,7 @@ class TimerPlug(SignalPlugin):
     ping some other program.
     """
     def __init__(self, conf):
-        SignalPlugin.__init__(self,conf,auto_start=False)#force no autostart
+        SignalPlugin.__init__(self,conf, autostart=False) #force no autostart
         self._timers = []
         self._connections = []
         self._port = DEFAULT_PORT
@@ -73,19 +73,19 @@ class TimerPlug(SignalPlugin):
         #                                 allowAll=self.config.getboolean("Daemon", "allow-all"))
         
 
-    def _save(self):
+    def save(self):
         """ Save my internal configuration."""
-        SignalPlugin._save(self)
+        SignalPlugin.save(self)
         self.config["port"] = self._port
         self.config["maxrand"] = self._maxrand
         self.config["minrand"] = self._minrand
         
         
-    def _get_commands(self):
+    def get_commands(self):
         """ Returns the command dictionary! """
         return TIMER
 
-    def _handle_msg(self, msg):
+    def handle_msg(self, msg):
         try:
             if msg.get("message") != COMMAND_MSG_TYPE: return
             
@@ -120,7 +120,7 @@ class TimerPlug(SignalPlugin):
                 routing.sendMsg(makeMsg(self._port,self.ID,dest))
                 
             elif msg.getValue() == "stop": 
-                self._stop()
+                self.stop()
                 
             elif msg.getValue() == "time":
                 #TODO: add this functionality
@@ -138,8 +138,7 @@ class TimerPlug(SignalPlugin):
             t = Timer(seconds,self.sendSignal)
             t.start()
             self._timers.append(t)
-            if not self.running:
-                Thread(target=self._run).start()
+            self.activate() #starts the run thread if its not already running
             
             routing.sendMsg(makeMsg("Started timer for "+str(seconds)+" seconds!",self.ID,dest))
         except:
@@ -169,17 +168,17 @@ class TimerPlug(SignalPlugin):
             except:pass
         self._connections=[]
                              
-    def _stop(self):
+    def deactivate(self):
         """ stops all connections and the server. """
-        SignalPlugin._stop(self)
+        SignalPlugin.deactivate(self)
         self.killconnections()
                  
                 
-    def _run(self):
+    def run(self):
         """ Runs when there are timers to watch, and then sends a signal when there is need to."""
         try:
-            self.running=True
-            while self.running:
+            self.is_activated=True
+            while self.is_activated:
                 try:
                     #make sure all of the connections are saved.
                     connection = self._socket.accept()
@@ -188,5 +187,4 @@ class TimerPlug(SignalPlugin):
         except Exception as e:
             logging.exception(e)
         finally:
-            self.killconnections()
-            self.running=False
+            self.deactivate()

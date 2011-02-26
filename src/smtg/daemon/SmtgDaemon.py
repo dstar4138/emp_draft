@@ -32,18 +32,20 @@ import logging
 from socket import timeout
 from threading import Thread
 
-import smtg.daemon.comm.routing as routing
+import smtg.comm.routing as routing
 import smtg.config.defaults as smtgconf
-from smtg.alert.SmtgAlertManager import SmtgAlertManager
-from smtg.plugin.SmtgPluginManager import SmtgPluginManager
+from smtg.attach.management import AttachmentManager
 from smtg.config.logger import setup_logging
 from smtg.config.SmtgConfigParser import SmtgConfigParser
 
 from smtg.daemon.RDaemon import RDaemon
 from smtg.daemon.daemonipc import DaemonServerSocket
-from smtg.daemon.comm.messages import makeErrorMsg, makeCommandMsg,  \
+from smtg.comm.messages import makeErrorMsg, makeCommandMsg,  \
                                       makeMsg, strToMessage, COMMAND_MSG_TYPE,  \
                                       ERROR_MSG_TYPE 
+
+def notimplemented(dest):
+    routing.sendMsg(makeErrorMsg("Action is not implemented yet!!",None,dest))
 
 def checkSmtgStatus():
     """ Checks whether the SmtgDaemon is currently running or not."""
@@ -101,7 +103,7 @@ class SmtgDaemon(RDaemon):
         self.start()
 
     
-    def _handle_msg(self, msg):
+    def handle_msg(self, msg):
         """ Handles the incoming messages passed to it from the CommReader. """
         logging.debug("daemon received: %s" % msg)
         action = strToMessage(msg)
@@ -113,40 +115,33 @@ class SmtgDaemon(RDaemon):
             if action.getValue() == "status":
                 routing.sendMsg(makeMsg("SMTG-D Running since: "+self.fm_start_time,source,dest))
             elif action.getValue() == "cmds":
-                routing.sendMsg(makeMsg(["status","plugins","cmds", "activate","deactivate",
+                routing.sendMsg(makeMsg(["status","plugins","cmds","attachments", "activate","deactivate",
                                          "alerters","plugid","alertid","var","cvar","help"],
                                 source,dest))
             elif action.getValue() == "plugins":
-                routing.sendMsg(makeMsg(self.pman.getPluginNames(),source,dest))
+                routing.sendMsg(makeMsg(self.aman.getAllNames(),source,dest))
+            elif action.getValue() == "plugins":
+                routing.sendMsg(makeMsg(self.aman.getPluginNames(),source,dest))
             elif action.getValue() == "alerters":
                 routing.sendMsg(makeMsg(self.aman.getAlerterNames(),source,dest))
-            elif action.getValue() == "plugid":
+            elif action.getValue() == "id":
                 try:
-                    result = routing.getIDByName(action.get("args")[0])
-                    if result is not None:
-                        routing.sendMsg(makeErrorMsg("name '"+action.get("args")[0]+"' does not exist.",None,dest))
-                    else:
-                        routing.sendMsg(makeMsg(result,source,dest))
-                    
-                except:
-                    routing.sendMsg(makeErrorMsg("plugid needs an argument.",None,dest))
-            elif action.getValue() == "alertid":
-                try:
-                    result = self.aman.getAlerterID(action.get("args")[0])
+                    result = self.aman.getAttachmentID(action.get("args")[0])
                     if result is not None:
                         routing.sendMsg(makeErrorMsg("name does not exist.",None,dest))
                     else:routing.sendMsg(makeMsg(result,source,dest))
                 except:
                     routing.sendMsg(makeErrorMsg("alertid needs an argument.",None,dest))
-            elif action.getValue() == "idsearch": pass #TODO: implement idsearch command to search for an id
-            elif action.getValue() == "var":pass #TODO: implement var command to get internal variables
-            elif action.getValue() == "cvar":pass #TODO: implement cvar to change variables
-            elif action.getValue() == "help": self.__help(dest, msg.get("args"))
+            elif action.getValue() == "idsearch": notimplemented(dest) #TODO: implement idsearch command to search for an id
+            elif action.getValue() == "var":notimplemented(dest) #TODO: implement var command to get internal variables
+            elif action.getValue() == "cvar":notimplemented(dest) #TODO: implement cvar to change variables
+            elif action.getValue() == "help": 
+                self.__help(dest, msg.get("args"))
             
             elif action.getValue() == "activate":
-                pass #TODO: implement activate command to activate inactive plugins/alerters
+                notimplemented(dest) #TODO: implement activate command to activate inactive plugins/alerters
             elif action.getValue() == "deactivate":
-                pass #TODO: implement deactivate command to deactivate active plugins/alerters
+                notimplemented(dest) #TODO: implement deactivate command to deactivate active plugins/alerters
             # the command does not exist.
             else: routing.sendMsg(makeErrorMsg("invalid action",source,dest))
         elif action.getType() == ERROR_MSG_TYPE:
@@ -169,8 +164,7 @@ class SmtgDaemon(RDaemon):
                 "plugins": "get a list of plug-ins ids to names.",
                 "cmds": "get the daemon command list.",
                 "alerters": "get a list of alerters ids to names.",
-                "plugid": "given a plug-ins name, it will return the ID",
-                "alertid": "given an alerter's name it will return the ID",
+                "id": "given an attachments name, it will return the ID",
                 "idsearch": "returns whether a given id exists",
                 "var": "returns all internal variables and their values",
                 "cvar": "given a variable name and a value, it will change it to the given value.",
@@ -180,13 +174,8 @@ class SmtgDaemon(RDaemon):
                 if args[0] == "all":
                     all = {"Daemon":cmds}
                     try:
-                        plugins = self.pman.getAllPlugins()
-                        for plug in plugins:
-                            all[plug.name] = plug.plugin_object._get_commands()
-                            
-                        alerters = self.aman.getAllPlugins()
-                        for alert in alerters:
-                            all[alert.name] = alert.plugin_object._get_commands()
+                        for attach in self.aman.getAllPlugins():
+                            all[attach.name] = attach.plugin_object.get_commands()
                     except: pass
                     routing.sendMsg(makeMsg(all,None,dest))    
                 else: # its a plugin or an alert id.
@@ -194,10 +183,10 @@ class SmtgDaemon(RDaemon):
                         routing.sendMsg(makeMsg(cmds, None, dest))
                     elif routing.isRegisteredByID(args[0]):
                         routing.sendMsg(makeMsg(
-                                    routing.getReferenceByID(args[0])._get_commands(), args[0], dest))
+                                    routing.getReferenceByID(args[0]).get_commands(), args[0], dest))
                     elif routing.isRegisteredByName(args[0]):
                         routing.sendMsg(makeMsg(
-                                    routing.getReferenceByName(args[0])._get_commands(), args[0], dest))
+                                    routing.getReferenceByName(args[0]).get_commands(), args[0], dest))
                     else:
                         routing.sendMsg(makeErrorMsg("invalid ID or Name",None,dest))
             else:#just the daemon ones.
@@ -231,14 +220,12 @@ class SmtgDaemon(RDaemon):
         """
         try:
             # load the plug-in manager now and search for the plug-ins.
-            self.pman = SmtgPluginManager(smtgconf.default_plugin_dirs, self.config)
-            self.pman.collectPlugins()
-            self.pman.activatePlugins()
-    
-            # start AlertManager and collect/activate alerters
-            self.aman = SmtgAlertManager(smtgconf.default_alerter_dirs,
-                                         self.config)
+            self.aman = AttachmentManager(smtgconf.default_plugin_dirs, self.config)
             self.aman.collectPlugins()
+            
+            #activates the attachments based on user cfg file. 
+            # if the attachment was a SignalPlugin, it will throw the plug-ins
+            # run() function into a new thread.
             self.aman.activatePlugins()
     
             # starts the comm router running to send messages!!
@@ -250,17 +237,12 @@ class SmtgDaemon(RDaemon):
             # start the interface thread
             Thread(target=self.__t2).start()
     
-            #start all the singal threads that require an autostart which are activated
-            for signal in self.pman.getSignalPlugins():
-                if signal.is_activated and signal.plugin_object.autostart:
-                    Thread(target=signal._run).start()
-    
             # start the pull loop.
             logging.debug("pull-thread started")
             while self.isRunning():
                 
                 # get all active loop plug-ins
-                activePlugins = self.pman.getLoopPlugins()
+                activePlugins = self.aman.getLoopPlugins()
                 if activePlugins:
                     for plugin in activePlugins:
                         if plugin.plugin_object.is_activated:
@@ -268,7 +250,7 @@ class SmtgDaemon(RDaemon):
                             # arguments. The only time arguments are needed 
                             # is if the plug-in was force updated by a command.
                             logging.debug("pulling LoopPlugin: %s" % plugin.name)
-                            try: plugin.plugin_object._update()
+                            try: plugin.plugin_object.update()
                             except Exception as e:
                                 logging.error("%s failed to update: %s" % (plugin.name, e))    
                 
@@ -282,13 +264,12 @@ class SmtgDaemon(RDaemon):
                 except: pass
                 
             #Stop all signal threads
-            for signal in self.pman.getSignalPlugins():
-                signal.plugin_object._stop()    
+            for signal in self.aman.getSignalPlugins():
+                signal.plugin_object.deactivate()    
             
             #flush the router, and save all configurations.
             routing.flush()
-            self.config.save( self.pman.getAllPlugins(), 
-                              self.aman.getAllPlugins() )
+            self.config.save( self.aman.getAllPlugins() )
             logging.debug("pull-thread is dead")
 
         except Exception as e:
@@ -319,11 +300,10 @@ class SmtgDaemon(RDaemon):
                 interface = routing.Interface(client_socket)
                 logging.debug("identifier: %s"% interface.ID)
             
-                # since there are abilities that this person can perform
-                # ask for first action, if its not uber-important, throw
-                # to new thread, otherwise execute it.
+                # since there are abilities that this person can perform throw
+                # to new thread by way of the interface class
                 routing.sendMsg(makeCommandMsg("proceed",self.ID, dest=interface.ID))
-                Thread(target=interface._run).start()
+                Thread(target=interface.receiver).start()
                 logging.debug("pushed interface to new thread.")
             except timeout:pass #catches a timeout and allows for daemon status checking
             except Exception as e: logging.exception(e)

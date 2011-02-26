@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License. 
 """
 
-from smtg.alert.smtgalert import Alerter
+from smtg.attach.attachments import Alerter
 
 
 class SmsAlerter(Alerter):#or maybe EmailAlerter

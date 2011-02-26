@@ -15,10 +15,10 @@ limitations under the License.
 import os
 import time
 import logging
-import smtg.daemon.comm.routing as routing
-from smtg.daemon.comm.messages import makeMsg, makeAlertMsg,  \
+import smtg.comm.routing as routing
+from smtg.comm.messages import makeMsg, makeAlertMsg,  \
                                       makeErrorMsg, COMMAND_MSG_TYPE
-from smtg.plugin.smtgplugin import LoopPlugin
+from smtg.attach.attachments import LoopPlugin
 
 class FileWatcher(LoopPlugin):
     """ Watches a list of local files for changes. Any changes are added 
@@ -44,16 +44,16 @@ class FileWatcher(LoopPlugin):
                         break
         self._commands =["help","update","status","files","add","rm"]
     
-    def _handle_msg(self, msg):
+    def handle_msg(self, msg):
         try:
             if msg.get("message") == COMMAND_MSG_TYPE:
                 value = msg.get("command")
                 dest = msg.get("source")
                 if value in self._commands:
                     if value == "update": 
-                        self._update(msg.get("args"))
+                        self.update(msg.get("args"))
                     elif value == "status": 
-                        if self._check_status():
+                        if self.check_status():
                             routing.sendMsg(makeMsg("File Watcher is running!",self.ID,dest))
                         else:
                             routing.sendMsg(makeMsg("File Watcher is not running!",self.ID,dest))
@@ -70,18 +70,18 @@ class FileWatcher(LoopPlugin):
             try:routing.sendMsg(makeErrorMsg("command did not exist", self.ID,msg.get("source")))
             except: routing.sendMsg(makeErrorMsg("command did not exist", self.ID,None))
     
-    def _get_commands(self):
+    def get_commands(self):
         return {"update": "forces an update, if a file is given then it will update just that one.",
                 "status": "checks whether the plug-in is activated.",
                 "files": "returns a list of the files being watched.",
                 "add": "add file x to list of files being watched.",
                 "rm": "remove file x from list, x being an index or the file name."}
     
-    def _check_status(self):
+    def check_status(self):
         """ Returns whether or not this plug-in is activated or not. """
         return self.is_activated
    
-    def _update(self, *args):
+    def update(self, *args):
         if len(args) > 0: #update the one given
             if args[0] in self._files:
                 if self._files.get(args[0]) < os.path.getmtime(args[0]):
@@ -120,9 +120,9 @@ class FileWatcher(LoopPlugin):
             routing.sendMsg(makeErrorMsg("couldn't remove file.",self.ID,dest))
 
 
-    def _save(self):
+    def save(self):
         """Pushes the internal variables to the config variable for saving! """
-        LoopPlugin._save(self)
+        LoopPlugin.save(self)
         filestring = ""
         count = len(self._files.keys())
         for file in self._files.keys():

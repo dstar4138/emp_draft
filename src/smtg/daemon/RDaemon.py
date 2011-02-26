@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License. 
 """
 import sys
-from smtg.daemon.comm.routing import Routee
+from smtg.comm.routing import Routee
 from smtg.daemon.daemon import Daemon
 
 class RDaemon(Daemon, Routee):

@@ -1,4 +1,4 @@
-__copyright__ = """
+"""
 Copyright (c) 2010-2011 Alexander Dean (dstar@csh.rit.edu)
 Licensed under the Apache License, Version 2.0 (the "License"); 
 you may not use this file except in compliance with the License. 
@@ -17,12 +17,65 @@ import queue
 import random
 import logging
 from threading import Thread
-from smtg.alert.smtgalert import Alerter
-from smtg.daemon.comm.messages import strToMessage, makeMsg, ALERT_MSG_TYPE
+from smtg.comm.messages import strToMessage, makeMsg, ALERT_MSG_TYPE
+
+class Routee():
+    """ Base object for every internal possibility for communication 
+    Within SMTG,"""
+    ID = ''
+    
+    def handle_msg(self, msg):
+        """Called by the router, this is what handles the message directed at 
+        this object. WARNING: This method should be thread safe, since its 
+        pushed to a new one upon getting called.
+        """
+        raise NotImplementedError("_handle_msg() not implemented")
+        
+class Interface(Routee):
+    """ This is just so the internal references can handle interfaces as 
+    Routees. 
+    """
+    def __init__(self, socket):
+        """ Create an Interface using a socket. Assumes that it is of the
+        type DaemonServerSocket.
+        """
+        self._socket = socket
+        register("interface", self)
+        
+    def handle_msg(self, msg):
+        """ Interfaces "handle the message" by sending it to the 
+        interface on the other end of the socket.
+        """
+        self._socket.send(msg)
+        
+    def receiver(self):
+        """ Runs the receiving portion of the interface. """
+        logging.debug("starting interface comm")
+        self._socket.setblocking(True)
+        try:
+            while 1:
+                msg = self._socket.recv()
+                if not msg: break
+                else: sendMsg(strToMessage(msg))
+        except Exception as e: 
+            logging.error("interface died because: %s"%e)
+        finally:
+            logging.debug("ending interface comm")
+            deregister(self.ID)
+            
+    def close(self):
+        """ Closes the communication to the Interface. """
+        self._socket.shutdown()
 
 
-_msg_queue = queue.Queue()
-_registration = {}
+#DO NOT CHANGE THE LOCATION OF THIS IMPORT
+from smtg.attach.attachments import Alerter
+
+## Routing protocol:
+##   The following are the functions that should be used for
+##  sending messages within the system.
+_msg_queue = queue.Queue() #thread-safe message queue
+_registration = {} #the registered receivers or messages (Routee)
         
 def register(name, ref):
     """ Registers you with the router, and any messages that are directed
@@ -93,7 +146,7 @@ def flush():
             id,(_,routee) = _registration.popitem()
             if isinstance(routee, Interface):
                 logging.debug("found interface that im deregistering") 
-                routee._handle_msg(makeMsg("shutting-down",None,id))
+                routee.handle_msg(makeMsg("shutting-down",None,id))
                 routee.close()
             logging.debug("deregistered: %s"%id)
 
@@ -115,7 +168,7 @@ def startRouter(base=None, triggermethod=lambda:False):
                 #ok to send since its been registered
                 _,ref = _registration.get(msg.getDestination())
                 logging.debug("sending message: %s" % msg)
-                Thread(target=ref._handle_msg, args=(msg,)).start()
+                Thread(target=ref.handle_msg, args=(msg,)).start()
                 
             # if the destination is not "registered" but its a known type
             elif msg.getDestination() == "" or msg.getDestination() == None:
@@ -127,13 +180,13 @@ def startRouter(base=None, triggermethod=lambda:False):
                         logging.debug("sending message to %s: %s"% (id, msg))
                         _,ref = _registration.get(id)
                         if isinstance(ref, Interface) or isinstance(ref, Alerter):
-                            Thread(target=ref._handle_msg, args=(msg,)).start()
+                            Thread(target=ref.handle_msg, args=(msg,)).start()
                         
                 # if not send it to the daemon to handle.
                 else:
                     if base is not None:
                         logging.debug("sending message to daemon: %s" % msg) 
-                        Thread(target=base._handle_msg,args=(msg,)).start()
+                        Thread(target=base.handle_msg,args=(msg,)).start()
                     else:
                         logging.debug("should have sent the message to the base handler")
                         
@@ -142,7 +195,7 @@ def startRouter(base=None, triggermethod=lambda:False):
                 # get the id and send it.
                 ref = getReferenceByName(msg.getDestination())
                 logging.debug("sending message: %s" % msg)
-                Thread(target=ref._handle_msg, args=(msg,)).start()
+                Thread(target=ref.handle_msg, args=(msg,)).start()
             
             # if we don't know how to handle the message, log and discard it. oh well.
             else:
@@ -166,53 +219,5 @@ def startRouter(base=None, triggermethod=lambda:False):
     logging.debug("ComRouter thread has died")
     
 
-
-class Routee():
-    """ Base object for every internal possibility for communication 
-    Within SMTG,"""
-    ID = ''
-    
-    def _handle_msg(self, msg):
-        """Called by the router, this is what handles the message directed at 
-        this object. WARNING: This method should be thread safe, since its 
-        pushed to a new one upon getting called.
-        """
-        raise NotImplementedError("_handle_msg() not implemented")
-        
-class Interface(Routee):
-    """ This is just so the internal references can handle interfaces as 
-    Routees. 
-    """
-    def __init__(self, socket):
-        """ Create an Interface using a socket. Assumes that it is of the
-        type DaemonServerSocket.
-        """
-        self._socket = socket
-        register("interface", self)
-        
-    def _handle_msg(self, msg):
-        """ Interfaces "handle the message" by sending it to the 
-        interface on the other end of the socket.
-        """
-        self._socket.send(msg)
-        
-    def _run(self):
-        """ Runs the receiving portion of the interface. """
-        logging.debug("starting interface comm")
-        self._socket.setblocking(True)
-        try:
-            while 1:
-                msg = self._socket.recv()
-                if not msg: break
-                else: sendMsg(strToMessage(msg))
-        except Exception as e: 
-            logging.error("interface died because: %s"%e)
-        finally:
-            logging.debug("ending interface comm")
-            deregister(self.ID)
-            
-    def close(self):
-        """ Closes the communication to the Interface. """
-        self._socket.shutdown()
 
     

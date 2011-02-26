@@ -12,7 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and 
 limitations under the License. 
 """
-from smtg.alert.smtgalert import Alerter
+from smtg.attach.attachments import Alerter
 
 class ExecAlerter(Alerter):
     """ Runs a program when an alert happens."""

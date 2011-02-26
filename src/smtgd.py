@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.0 
+#!/usr/bin/env python3.0
 
 __copyright__ = """
 Copyright (c) 2010-2011 Alexander Dean (dstar@csh.rit.edu)
@@ -31,7 +31,7 @@ from optparse import OptionParser, SUPPRESS_HELP
 
 from smtg.daemon.daemonipc import DaemonClientSocket
 from smtg.daemon.SmtgDaemon import SmtgDaemon, __version__
-from smtg.daemon.comm.messages import makeCommandMsg, strToMessage
+from smtg.comm.messages import makeCommandMsg, strToMessage
    
 def main():
     parser = OptionParser( usage=__usage__, 

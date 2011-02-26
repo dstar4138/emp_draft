@@ -16,11 +16,16 @@ import os
 import sys
 import re
 import logging
-import smtg.daemon.comm.routing as routing
+import smtg.comm.routing as routing
 from yapsy.IPlugin import IPlugin
 from yapsy.PluginInfo import PluginInfo
 from yapsy.PluginManager import PluginManager
 from yapsy.FilteredPluginManager import FilteredPluginManager
+
+
+BOOL_CHOICES = {"0":False,"1":True,"no":False,"yes":True,"true":True,
+                "false":False,"on":True,"off":False, "":False}
+
 
 
 class SmtgPluginInfo(PluginInfo):
@@ -60,7 +65,16 @@ class VariablePluginManager(FilteredPluginManager):
         
         FilteredPluginManager.__init__(self, decorated_manager=decorated_object)
         
-        
+    def isPluginOK(self, info):
+        """ All attachments need to have the 'Cmd' variable in the 'Core' section
+        of their description files. If ever there is a 'load' variable in the 
+        'Core' section, then it will check if its False. This is a quick way of 
+        making an attachment filtered out.
+        """
+        if hasattr(info,"load") and not info.load:
+            return False
+        else: 
+            return hasattr(info, "plugname")
 
 
 class DefaultPluginManager(PluginManager):
@@ -78,7 +92,9 @@ class DefaultPluginManager(PluginManager):
     
         
     def loadPlugins(self, callback=None):
-        """Re-written to allow for passing variables to the new plug-ins. """
+        """Re-written to allow for passing variables to the new plug-ins and to
+        register them with the message router. 
+        """
         
         if not hasattr(self, '_candidates'):
             raise ValueError("locatePlugins must be called before loadPlugins")
@@ -119,22 +135,32 @@ class DefaultPluginManager(PluginManager):
                     if not (candidate_infofile in self._category_file_mapping[current_category]): 
                         # we found a new plugin: initialise it and search for the next one
                         self.config.defaultAttachmentVars(plugin_info.plugname, plugin_info.defaults, current_category)
-                        plugin_info.plugin_object = element(self.config.getAttachmentVars(plugin_info.plugname))
-                        plugin_info.category = current_category
+                        attachmentVars = self.config.getAttachmentVars(plugin_info.plugname)
                         
-                        #now we will register the plugin with the router
-                        routing.register(plugin_info.plugname, plugin_info.plugin_object)
-                        
-                        self.category_mapping[current_category].append(plugin_info)
-                        self._category_file_mapping[current_category].append(candidate_infofile)
-                        current_category = None
+                        # check that the plugin is actually wanting to be loaded.
+                        if "load" not in attachmentVars or self.__boolme(attachmentVars["load"]):
+                            
+                            plugin_info.plugin_object = element(attachmentVars)
+                            plugin_info.category = current_category
+                            
+                            #now we will register the plugin with the router
+                            routing.register(plugin_info.plugname, plugin_info.plugin_object)
+                            
+                            self.category_mapping[current_category].append(plugin_info)
+                            self._category_file_mapping[current_category].append(candidate_infofile)
+                            current_category = None
                     break
 
         # Remove candidates list since we don't need them any more and
         # don't need to take up the space
         delattr(self, '_candidates')      
         
-        
+    def __boolme(self,res):
+        if res in BOOL_CHOICES:
+            self.autostart=BOOL_CHOICES[res]
+        else:
+            self.autostart=False
+            
     def gatherBasicPluginInfo(self, directory, filename):
         plugin_info,config_parser = self._gatherCorePluginInfo(directory, filename)
         if plugin_info is None:
@@ -156,6 +182,8 @@ class DefaultPluginManager(PluginManager):
         if config_parser.has_section("Core"):
             if config_parser.has_option("Core","Cmd"):
                 plugin_info.plugname = config_parser.get("Core","Cmd")
+            if config_parser.has_option("Core","load"):
+                plugin_info.load = config_parser.getboolean("Core","load")
         
         if config_parser.has_section("Defaults"):
             for option in config_parser.options("Defaults"):

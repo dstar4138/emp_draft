@@ -15,9 +15,10 @@ limitations under the License.
 
 import os, sys, logging
 from configparser import ConfigParser
+from smtg.attach.attachments import Alerter
 from smtg.config.defaults import default_configs, default_cfg_files, writeto_cfg_file
 
-CATEGORY_MAP = {"Feeds":"plugin_",
+CATEGORY_MAP = {"Loops":"plugin_",
                 "Signals":"plugin_",
                 "Alerts":"alerter_"}
 
@@ -105,35 +106,23 @@ class SmtgConfigParser(ConfigParser):
             if not self.has_option(section, option):
                 self.set(section, option, defaults[option])
     
-    def save(self, plugins, alerters):
+    def save(self, attachments):
         #XXX: rewrite to conserve comments in the config file if there are any.
         """ Save the configurations to the local user's configuration. """
         if writeto_cfg_file is not None:
             # update the plug-in variables before saving.
-            for plugin in plugins:
+            for attach in attachments:
                 try:
-                    plugin.plugin_object._save() #make the plugin save before pulling the configs
+                    attach.plugin_object.save() #make the plugin save before pulling the configs
                     
-                    for key in plugin.plugin_object.config.keys():
-                        self.set("plugin_"+plugin.plugname,key,plugin.plugin_object.config[key])
-                        
-                    if hasattr(plugin.plugin_object, "autostart"): #its a SignalPlugin
-                        self.set("plugin_"+plugin.plugname,
-                                 "autostart",str(plugin.plugin_object.autostart))
-                    elif hasattr(plugin.plugin_object,"update_importance"):
-                        self.set("plugin_"+plugin.plugname,
-                                 "importance",str(plugin.plugin_object.update_importance))
-                    #else, it doesn't matter 
+                    if isinstance(attach.plugin_object, Alerter):
+                        for key in attach.plugin_object.config.keys():
+                            self.set("alerter_"+attach.plugname, str(key), str(attach.plugin_object.config[key]))
+                    else:
+                        for key in attach.plugin_object.config.keys():
+                            self.set("plugin_"+attach.plugname,key,attach.plugin_object.config[key])
+                        #else, it doesn't matter 
                 except Exception as e: 
-                    logging.exception(e)
-            
-            # update the alerter variables before saving.
-            for alerter in alerters:
-                try:
-                    alerter.plugin_object._save() #make the plugin save before pulling the configs
-                    for key in alerter.plugin_object.config.keys():
-                        self.set("alerter_"+alerter.plugname, str(key), str(alerter.plugin_object.config[key]))
-                except Exception as e:
                     logging.exception(e)
             
             # make sure it exists and can be written to.

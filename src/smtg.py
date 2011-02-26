@@ -34,7 +34,7 @@ looking cool while monitoring the hell out of your plug-ins.
 import sys
 import argparse
 from smtg.daemon.SmtgDaemon import checkSmtgStatus, SmtgDaemon
-from smtg.daemon.comm.messages import makeCommandMsg,strToMessage, ERROR_MSG_TYPE
+from smtg.comm.messages import makeCommandMsg,strToMessage, ERROR_MSG_TYPE
 from smtg.daemon.daemonipc import DaemonClientSocket
 #import curses
 
