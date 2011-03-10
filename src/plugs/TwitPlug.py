@@ -12,20 +12,32 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and 
 limitations under the License. 
 """
-from alerters.ExecAlerter import ExecAlerter
 
-class SoundAlerter(ExecAlerter):
-    """ Plays a sound when it gets an alert. Only really works if 
-    its on the local machine and it has speakers... Duh
+from empbase.attach.attachments import LoopPlug
+
+#i want it to act similarly to twurl but only through smtg, this means 
+#that when it updates it can pull information that you want it to, and 
+#thus twurl becomes a monitor.
+
+
+#commands
+TWITTER = {}
+
+
+class TwitPlug(LoopPlug):
+    """This will fully utilize the Twitter.com API and allow you to
+    send any command that it allows. It will also readily check your 
+    private-message mailbox and you time-line.
     """
-    
     def __init__(self, conf):
-        """Sets up the alerter."""
-        ExecAlerter.__init__(self,conf)
+        LoopPlug.__init__(self, conf)
         
-    def _handle_msg(self, msg):
-        """ """
+        
+    def handle_msg(self, msg):
         pass
-    
-    def _alert(self, args):
+        
+    def get_commands(self):
+        return TWITTER
+
+    def save(self):
         pass

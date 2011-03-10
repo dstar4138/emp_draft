@@ -13,19 +13,15 @@ See the License for the specific language governing permissions and
 limitations under the License. 
 """
 
-from smtg.attach.attachments import Alerter
 
-
-class SmsAlerter(Alerter):#or maybe EmailAlerter
-    """ Sends an email to a phone upon getting an Alert."""
+class Routee():
+    """ Base object for every internal possibility for communication 
+    within EMP."""
+    ID = ''
     
-    def __init__(self, conf):
-        """Sets up the alerter."""
-        Alerter.__init__(self,conf)
-        
-    def _handle_msg(self, msg):
-        """ """
-        pass
-    
-    def _alert(self, args):
-        pass
+    def handle_msg(self, msg):
+        """Called by the router, this is what handles the message directed at 
+        this object. WARNING: This method should be thread safe, since its 
+        pushed to a new one upon getting called.
+        """
+        raise NotImplementedError("_handle_msg() not implemented")

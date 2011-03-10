@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License. 
 """
 import sys
-from smtg.comm.routing import Routee
-from smtg.daemon.daemon import Daemon
+from empbase.comm.routee import Routee
+from empbase.daemon.daemon import Daemon
 
 class RDaemon(Daemon, Routee):
     """ Created to just provide portability of the current Daemon 

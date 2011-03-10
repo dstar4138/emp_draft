@@ -17,107 +17,63 @@ import queue
 import random
 import logging
 from threading import Thread
-from smtg.comm.messages import strToMessage, makeMsg, ALERT_MSG_TYPE
 
-class Routee():
-    """ Base object for every internal possibility for communication 
-    Within SMTG,"""
-    ID = ''
-    
-    def handle_msg(self, msg):
-        """Called by the router, this is what handles the message directed at 
-        this object. WARNING: This method should be thread safe, since its 
-        pushed to a new one upon getting called.
-        """
-        raise NotImplementedError("_handle_msg() not implemented")
-        
-class Interface(Routee):
-    """ This is just so the internal references can handle interfaces as 
-    Routees. 
-    """
-    def __init__(self, socket):
-        """ Create an Interface using a socket. Assumes that it is of the
-        type DaemonServerSocket.
-        """
-        self._socket = socket
-        register("interface", self)
-        
-    def handle_msg(self, msg):
-        """ Interfaces "handle the message" by sending it to the 
-        interface on the other end of the socket.
-        """
-        self._socket.send(msg)
-        
-    def receiver(self):
-        """ Runs the receiving portion of the interface. """
-        logging.debug("starting interface comm")
-        self._socket.setblocking(True)
-        try:
-            while 1:
-                msg = self._socket.recv()
-                if not msg: break
-                else: sendMsg(strToMessage(msg))
-        except Exception as e: 
-            logging.error("interface died because: %s"%e)
-        finally:
-            logging.debug("ending interface comm")
-            deregister(self.ID)
-            
-    def close(self):
-        """ Closes the communication to the Interface. """
-        self._socket.shutdown()
-
-
-#DO NOT CHANGE THE LOCATION OF THIS IMPORT
-from smtg.attach.attachments import Alerter
+#import smtg.comm.registry as registry
+from empbase.comm.messages import strToMessage, makeMsg, ALERT_MSG_TYPE
+from empbase.comm.interface import Interface
+from empbase.attach.attachments import Alarm
 
 ## Routing protocol:
 ##   The following are the functions that should be used for
 ##  sending messages within the system.
+
 _msg_queue = queue.Queue() #thread-safe message queue
-_registration = {} #the registered receivers or messages (Routee)
+_routees = {} #the registered receivers of messages (Routee objects)
+#_registry = registry.load() # the registry xml file
         
 def register(name, ref):
     """ Registers you with the router, and any messages that are directed
     at you will be forwarded to you. You MUST be of the type Routee. """
     
+    #TODO: adjust the registration process to compensate for the registry.
+    
     while 1:
         id = "%s" % str(random.random())[2:12]
-        if id in list(_registration.keys()): 
+        if id in list(_routees.keys()): 
             continue
         else:
-            _registration[id] = (name,ref)
+            _routees[id] = (name,ref)
             ref.ID = id
             logging.debug("registered: %s=%s"%(id,name))
             break
 
 def isRegisteredByID(id):
     """ Checks if the id is registered in the Router, returns a boolean."""
-    return (id in list(_registration.keys()))
+    return (id in list(_routees.keys()))
         
 
 def isRegisteredByName(name):
     """ Checks if the name is registered, returns the id or False if otherwise 
     not registered.
     """
-    for n,_ in list(_registration.values()):
+    for n,_ in list(_routees.values()):
         if name == n: return True
     return False
 
 def getReferenceByID(id):
     """ Get the reference to the routee given the id."""
-    _,ref = _registration.get(id, (None,None))
+    _,ref = _routees.get(id, (None,None))
     return ref  
 
 def getReferenceByName(name):
     """ Get the reference to the routee given the name."""
-    for n,ref in list(_registration.values()):
+    for n,ref in list(_routees.values()):
         if name == n: return ref
     return None
 
 def getIDByName(name):
-    for id in list(_registration.keys()):
-        n,_ = _registration.get(id, (None,None))
+    for id in list(_routees.keys()):
+        n,_ = _routees.get(id, (None,None))
         logging.debug("n=%s, name=%s" %(n,name))
         if n == name: return id
     return None
@@ -125,7 +81,7 @@ def getIDByName(name):
 def deregister(id):
     """ Removes a Routee from the registry. """
     if id is not None:
-        routee = _registration.pop(id, None)
+        routee = _routees.pop(id, None)
         if isinstance(routee, Interface): routee.close()
         logging.debug("deregistered: %s"%id)
 
@@ -142,8 +98,8 @@ def flush():
             _msg_queue.get()
     except:pass
     finally:#deregister everyone, makes sure all interface threads are dead
-        while len(_registration) > 0:
-            id,(_,routee) = _registration.popitem()
+        while len(_routees) > 0:
+            id,(_,routee) = _routees.popitem()
             if isinstance(routee, Interface):
                 logging.debug("found interface that im deregistering") 
                 routee.handle_msg(makeMsg("shutting-down",None,id))
@@ -162,11 +118,11 @@ def startRouter(base=None, triggermethod=lambda:False):
             elif msg is None: continue
             
             # If the destination is registered, then send it
-            logging.debug("registered: %s"%str(list(_registration.keys())))
+            logging.debug("registered: %s"%str(list(_routees.keys())))
             logging.debug("destination: %s"%msg.getDestination())
             if isRegisteredByID(msg.getDestination()):
                 #ok to send since its been registered
-                _,ref = _registration.get(msg.getDestination())
+                _,ref = _routees.get(msg.getDestination())
                 logging.debug("sending message: %s" % msg)
                 Thread(target=ref.handle_msg, args=(msg,)).start()
                 
@@ -176,10 +132,10 @@ def startRouter(base=None, triggermethod=lambda:False):
                 # Check if the message type is an alert, if it is, then send it
                 # to all interfaces and alerters
                 if msg.getType() == ALERT_MSG_TYPE:
-                    for id in list( _registration.keys()):
+                    for id in list( _routees.keys()):
                         logging.debug("sending message to %s: %s"% (id, msg))
-                        _,ref = _registration.get(id)
-                        if isinstance(ref, Interface) or isinstance(ref, Alerter):
+                        _,ref = _routees.get(id)
+                        if isinstance(ref, Interface) or isinstance(ref, Alarm):
                             Thread(target=ref.handle_msg, args=(msg,)).start()
                         
                 # if not send it to the daemon to handle.

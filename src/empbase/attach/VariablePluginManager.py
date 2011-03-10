@@ -16,14 +16,14 @@ import os
 import sys
 import re
 import logging
-import smtg.comm.routing as routing
+import empbase.comm.routing as routing
 from yapsy.IPlugin import IPlugin
 from yapsy.PluginInfo import PluginInfo
 from yapsy.PluginManager import PluginManager
 from yapsy.FilteredPluginManager import FilteredPluginManager
 
 
-class SmtgPluginInfo(PluginInfo):
+class EmpAttachmentInfo(PluginInfo):
     def __init__(self, plugin_name, plugin_path):
         self.defaults = {}
         self.plugname = str(plugin_name).strip().lower().replace(" ", "")
@@ -43,7 +43,7 @@ class SmtgPluginInfo(PluginInfo):
         
     def __str__(self):
         """Added to improve logging.""" 
-        return "<PLUGIN: "+str(self.name)+" - "+str(self.defaults)+">"
+        return "<ATTACH: "+str(self.name)+" - "+str(self.defaults)+">"
 
 
 class VariablePluginManager(FilteredPluginManager):
@@ -82,7 +82,7 @@ class DefaultPluginManager(PluginManager):
                  directories_list=None, 
                  plugin_info_ext="yapsy-plugin"):
         PluginManager.__init__(self, categories_filter, directories_list, plugin_info_ext)
-        self.setPluginInfoClass(SmtgPluginInfo)
+        self.setPluginInfoClass(EmpAttachmentInfo)
         self.config = cfg_p
     
         

@@ -13,31 +13,19 @@ See the License for the specific language governing permissions and
 limitations under the License. 
 """
 
-from smtg.attach.attachments import LoopPlugin
-
-#i want it to act similarly to twurl but only through smtg, this means 
-#that when it updates it can pull information that you want it to, and 
-#thus twurl becomes a monitor.
+from empbase.attach.attachments import Alarm
 
 
-#commands
-TWITTER = {}
-
-
-class TwitPlug(LoopPlugin):
-    """This will fully utilize the Twitter.com API and allow you to
-    send any command that it allows. It will also readily check your 
-    private-message mailbox and you time-line.
-    """
+class SmsAlerter(Alarm):#or maybe EmailAlerter
+    """ Sends an email to a phone upon getting an Alert."""
+    
     def __init__(self, conf):
-        LoopPlugin.__init__(self, conf)
-        
+        """Sets up the alerter."""
+        Alarm.__init__(self,conf)
         
     def handle_msg(self, msg):
+        """ """
         pass
-        
-    def get_commands(self):
-        return TWITTER
-
-    def save(self):
+    
+    def alert(self, args):
         pass

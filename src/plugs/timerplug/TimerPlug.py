@@ -15,12 +15,12 @@ limitations under the License.
 import random
 import logging
 from socket import timeout
-from plugins.timerplug.mytimer import MyTimer
+from plugs.timerplug.mytimer import MyTimer
 
-import smtg.comm.routing as routing
-from smtg.attach.attachments import SignalPlugin
-from smtg.daemon.daemonipc import DaemonServerSocket
-from smtg.comm.messages import COMMAND_MSG_TYPE, makeErrorMsg, makeMsg, makeAlertMsg
+import empbase.comm.routing as routing
+from empbase.attach.attachments import SignalPlug
+from empbase.daemon.daemonipc import DaemonServerSocket
+from empbase.comm.messages import COMMAND_MSG_TYPE, makeErrorMsg, makeMsg, makeAlertMsg
 
 DEFAULT_PORT = 8081
 DEFAULT_MAXRAND = 360
@@ -39,7 +39,7 @@ TIMER = {"status": "Returns the status of a given timer, or all of them.",
          "port"  : "Get the port to connect to on the current host that the alert msg will signal down.",
          "add"   : "Add with three variables, first is seconds, second is minutes, third is hours."}
     
-class TimerPlug(SignalPlugin):
+class TimerPlug(SignalPlug):
     """The Timer plug-in will be the most simplistic SignalPlugin. It will
     create a timer in accordance with the time you need, and then send an 
     alert once the timer is finished. You can ask for a port number from 
@@ -47,7 +47,7 @@ class TimerPlug(SignalPlugin):
     ping some other program.
     """
     def __init__(self, conf):
-        SignalPlugin.__init__(self,conf, autostart=False) #force no autostart
+        SignalPlug.__init__(self,conf, autostart=False) #force no autostart
         self._timers = []
         self._connections = []
         self.running = False
@@ -68,7 +68,7 @@ class TimerPlug(SignalPlugin):
 
     def save(self):
         """ Save my internal configuration."""
-        SignalPlugin.save(self)
+        SignalPlug.save(self)
         self.config.set("port", self._port)
         self.config.set("maxrand", self._maxrand)
         self.config.set("minrand", self._minrand)
@@ -183,7 +183,7 @@ class TimerPlug(SignalPlugin):
              
     def deactivate(self):
         """ stops all connections and the server. """
-        SignalPlugin.deactivate(self)
+        SignalPlug.deactivate(self)
         self.killconnections()
         self.killtimers()
                  

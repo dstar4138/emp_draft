@@ -43,8 +43,8 @@ default_configs = {
     # the location of the pid file, can not be relative.
       "pid-file" : "",
  
-    # the location of the plugin directory, can't be relative. 
-      "plugin-dir" : "",
+    # the location of the directory to save all data to, can't be relative. 
+      "base-dir" : "",
     
     # the port number for the interface communications.
       "port" : "8080",
@@ -96,22 +96,26 @@ writeto_cfg_file = None
 # anything missing?
 #
 if CUR_PLATFORM.find("linux")!=-1:    #linux systems.
-    default_configs["Daemon"]["pid-file"]="/var/tmp/smtg.pid"
-    default_configs["Logging"]["log-file"]=os.path.expanduser("~/.smtg/errors.log")
-    writeto_cfg_file = os.path.expanduser("~/.smtg/smtg.cfg")
+    base_dir = os.path.expanduser("~/.emp")
     
-    default_cfg_files.append("/etc/smtg/smtg.cfg")
+    default_configs["Daemon"]["pid-file"]="/var/tmp/emp.pid"
+    default_configs["Daemon"]["base-dir"]=base_dir
+    
+    default_configs["Logging"]["log-file"]=base_dir+"/errors.log"
+    writeto_cfg_file = base_dir+"/emp.cfg"
+    
+    default_cfg_files.append("/etc/emp/emp.cfg")
     default_cfg_files.append(writeto_cfg_file)
     # then a given file will be read in at the end in SmtgConfigParser
 
-    default_plugin_dirs.append("/etc/smtg/plugins")
-    default_plugin_dirs.append(os.path.expanduser("~/.smtg/plugins"))
-    default_plugin_dirs.append("plugins") # look in the local src/plugins directory too
+    default_plugin_dirs.append("/etc/emp/plugs")
+    default_plugin_dirs.append(base_dir+"/plugs")
+    default_plugin_dirs.append("plugs") # look in the local src/plugins directory too
 
 
-    default_alerter_dirs.append("/etc/smtg/alerters")
-    default_alerter_dirs.append(os.path.expanduser("~/.smtg/alerters"))
-    default_alerter_dirs.append("alerters") # look in the local src/alerters directory too
+    default_alerter_dirs.append("/etc/smtg/alarms")
+    default_alerter_dirs.append(base_dir+"/alarms")
+    default_alerter_dirs.append("alarms") # look in the local src/alerters directory too
 
 elif CUR_PLATFORM.find("win32")!=-1:  # Windows systems.
     pass

@@ -12,19 +12,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and 
 limitations under the License. 
 """
+from empbase.attach.attachments import Alarm
 
-from smtg.attach.attachments import Alerter
-
-class EmailAlerter(Alerter):
-    """ Sends an email upon getting an Alert."""
+class ExecAlerter(Alarm):
+    """ Runs a program when an alert happens."""
     
     def __init__(self, conf):
         """Sets up the alerter."""
-        Alerter.__init__(self, conf)
+        Alarm.__init__(self,conf)
         
-    def handle_msg(self, msg):
+    def _handle_msg(self, msg):
         """ """
         pass
     
-    def alert(self, args):
+    def _alert(self, args):
         pass

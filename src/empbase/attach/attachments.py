@@ -24,19 +24,19 @@ __version__="0.8"
 
 from threading import Thread
 from yapsy.IPlugin import IPlugin
-from smtg.comm.routing import Routee
+from empbase.comm.routee import Routee
 
 # Importance changes its location in the list of updates.
 #   The lower the number the closer to the beginning it is. You can
-# get fancy with the importance levels, or just use one of the ones
-# provided. 
+#   get fancy with the importance levels, or just use one of the ones
+#   provided. 
 LOW_IMPORTANCE  = 100
 MID_IMPORTANCE  = 50
 HIGH_IMPORTANCE = 0
 
-class SmtgPlugin(IPlugin, Routee):
-    """The base of all plug-ins for the SMTG platform. Please do not use
-    this as your interface. Use either LoopPlugin, or SignalPlugin as your
+class EmpAttachment(IPlugin, Routee):
+    """The base of all plugs and alarms for the SMTG platform. Please do not 
+    use this as your interface. Use either LoopPlug, or SignalPlug as your
     interface for your new plug-in since SMTG separates it's internals
     based on those.
     """
@@ -68,14 +68,14 @@ class SmtgPlugin(IPlugin, Routee):
         self.config.set("makeactive", self.makeactive)
 
 
-class LoopPlugin(SmtgPlugin):
-    """Of the two arch-types of plug-ins this is the most commonly used.
-    The LoopPlugin is a plug-in who pulls information from a source on 
+class LoopPlug(EmpAttachment):
+    """Of the two arch-types of plugs this is the most commonly used.
+    The LoopPlug is a plug-in who pulls information from a source on 
     a regular interval. The importance of the LoopPlugin decides when it
     gets to be pulled in the list of other LoopPlugins.
     """
     def __init__(self, conf, importance=MID_IMPORTANCE):
-        SmtgPlugin.__init__(self, conf)
+        EmpAttachment.__init__(self, conf)
         self.update_importance=self.config.getint("importance",importance)
 
     def change_importance(self, importance):
@@ -89,9 +89,9 @@ class LoopPlugin(SmtgPlugin):
         raise NotImplementedError("update() not implemented") 
 
 
-class SignalPlugin(SmtgPlugin): 
-    """The SignalPlugin type waits for a message rather than pulling on 
-    an interval like the LoopPlugin. These are necessary for high 
+class SignalPlug(EmpAttachment): 
+    """The SignalPlug type waits for a message rather than pulling on 
+    an interval like the LoopPlug. These are necessary for high 
     'importance' items, such as for alert systems such as un-authorized 
     room entrance system or even a simplistic chat system.
     
@@ -101,7 +101,7 @@ class SignalPlugin(SmtgPlugin):
     until it's hand-launched by the user. 
     """
     def __init__(self, conf, autostart=None):
-        SmtgPlugin.__init__(self, conf)
+        EmpAttachment.__init__(self, conf)
         if autostart is not None and autostart:
             self.makeactive = autostart
     
@@ -120,14 +120,14 @@ class SignalPlugin(SmtgPlugin):
         raise NotImplementedError("run() not implemented")
 
 
-class Alerter(SmtgPlugin):
+class Alarm(EmpAttachment):
     """This is the base method of alerting. """
     
     def __init__(self, conf):
         """ Create the foundation of an alert with a dictionary of internal 
-        variables, passed to it via the daemon/AlertManager.
+        variables, passed to it via the daemon/AttachmentManager.
         """
-        SmtgPlugin.__init__(self, conf)
+        EmpAttachment.__init__(self, conf)
     
     def alert(self, *args):
         """ Runs the alert process. This is the core of an alert. """

@@ -13,16 +13,16 @@ See the License for the specific language governing permissions and
 limitations under the License. 
 """
 
-from smtg.attach.VariablePluginManager import VariablePluginManager
-from smtg.attach.attachments import Alerter, LoopPlugin, SignalPlugin
+from empbase.attach.VariablePluginManager import VariablePluginManager
+from empbase.attach.attachments import Alarm, LoopPlug, SignalPlug
 
 # the internal categories that the attachment manager can handle.
-ATTACH_CAT = {"Alerters":Alerter,
-              "Loops": LoopPlugin,
-              "Signals": SignalPlugin}
+ATTACH_CAT = {"Alarms":Alarm,
+              "Loops": LoopPlug,
+              "Signals": SignalPlug}
 
 # the expected extension of description files for SMTG attachments
-ATTACH_EXT = "smtg"
+ATTACH_EXT = "emp"
 
 class AttachmentManager(VariablePluginManager):
     
@@ -33,7 +33,7 @@ class AttachmentManager(VariablePluginManager):
                                         plugin_info_ext=ATTACH_EXT )
         
         
-    def activatePlugins(self):
+    def activateAttachments(self):
         """ Activates the attachments that want to be activated on
         start-up. The rest are in idle state until hand-activated by 
         the user.
@@ -42,20 +42,20 @@ class AttachmentManager(VariablePluginManager):
             if attach.plugin_object.makeactive:
                 attach.plugin_object.activate()
                 
-    def getLoopPlugins(self):
+    def getLoopPlugs(self):
         """ Get all the loop plug-ins that are loaded. This is used in the pull
         loop thread for updating all of them. 
         """
         return sorted( self.getPluginsOfCategory("Loops"),
                        key=lambda x: x.plugin_object.update_importance)
         
-    def getSignalPlugins(self):
+    def getSignalPlugs(self):
         """ Utility function for getting all the signal plugins. """
         return self.getPluginsOfCategory("Signals")
     
-    def getAlerters(self):
+    def getAlarms(self):
         """ Utility function for getting all the Alerter attachments. """
-        return self.getPluginsOfCategory("Alerters")
+        return self.getPluginsOfCategory("Alarms")
     
     def getPlugs(self):
         return self.getPluginsOfCategory("Signals").extend(
@@ -70,13 +70,13 @@ class AttachmentManager(VariablePluginManager):
             names[attach.plugin_object.ID] = (attach.plugname, attach.name)
         return names
     
-    def getAlerterNames(self):
+    def getAlarmNames(self):
         names = {}
-        for attach in self.getAlerters():
+        for attach in self.getAlarms():
             names[attach.plugin_object.ID] = (attach.plugname, attach.name)
         return names
     
-    def getPluginNames(self):
+    def getPlugNames(self):
         names = {}
         for attach in self.getPlugs():
             names[attach.plugin_object.ID] = (attach.plugname, attach.name)

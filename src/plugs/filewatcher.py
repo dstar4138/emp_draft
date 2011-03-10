@@ -15,12 +15,12 @@ limitations under the License.
 import os
 import time
 import logging
-import smtg.comm.routing as routing
-from smtg.comm.messages import makeMsg, makeAlertMsg,  \
+import empbase.comm.routing as routing
+from empbase.comm.messages import makeMsg, makeAlertMsg,  \
                                       makeErrorMsg, COMMAND_MSG_TYPE
-from smtg.attach.attachments import LoopPlugin
+from empbase.attach.attachments import LoopPlug
 
-class FileWatcher(LoopPlugin):
+class FileWatcher(LoopPlug):
     """ Watches a list of local files for changes. Any changes are added 
     to the internal alert queue. The commands that can be sent to this are:
         update  - forces an update
@@ -33,7 +33,7 @@ class FileWatcher(LoopPlugin):
     FileWatcher class.
     """
     def __init__(self, conf):
-        LoopPlugin.__init__(self, conf)
+        LoopPlug.__init__(self, conf)
         self._files = {}
         for file in self.config.getlist("files",[]):
             try: self._files[file] = os.path.getmtime(file)
@@ -120,7 +120,7 @@ class FileWatcher(LoopPlugin):
 
     def save(self):
         """Pushes the internal variables to the config variable for saving! """
-        LoopPlugin.save(self)
+        LoopPlug.save(self)
         filestring = ""
         count = len(self._files.keys())
         for file in self._files.keys():

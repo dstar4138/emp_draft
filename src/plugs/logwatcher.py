@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License. 
 """
 import logging
-from plugins.filewatcher import FileWatcher
+from plugs.filewatcher import FileWatcher
 
 
 class LogWatcher(FileWatcher):

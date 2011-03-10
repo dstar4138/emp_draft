@@ -14,7 +14,7 @@ limitations under the License.
 """
 
 import logging
-from smtg.config.SmtgConfigParser import SmtgConfigParser
+from empbase.config.empconfigparser import EmpConfigParser
 
 #The format of the logging to the screen, log file.
 _LOGGING_FORMAT_ = "%(levelname)-8s::[%(asctime)s]-%(funcName)s@%(lineno)d %(message)s"
@@ -33,7 +33,7 @@ def setup_logging(configuration):
     Info - These are ignored and should not be used.
     """
     # if config param not the right type, return failed
-    if type(configuration) is not SmtgConfigParser:
+    if type(configuration) is not EmpConfigParser:
         raise TypeError("Configuration isn't valid SmtgConfigParser object")
     
     # if no logging wanted, return setup success

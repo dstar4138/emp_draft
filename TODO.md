@@ -12,7 +12,7 @@ definitely more time consuming...
 * Add functionality for requesting alert methods in plug-ins
 * write the setup.py script for installing smtg.
 * Fix defaults for other operating system types.
-
+* Rename SMTG to EMP: Extensible Monitoring Platform and update all references.
 
 Wishlist
 --------

@@ -15,14 +15,14 @@ limitations under the License.
 
 import os, sys, logging
 from configparser import ConfigParser
-from smtg.attach.attachments import Alerter
-from smtg.config.defaults import default_configs, default_cfg_files, writeto_cfg_file
+from empbase.attach.attachments import Alarm
+from empbase.config.defaults import default_configs, default_cfg_files, writeto_cfg_file
 
-CATEGORY_MAP = {"Loops":"plugin_",
-                "Signals":"plugin_",
-                "Alerters":"alerter_"}
+CATEGORY_MAP = {"Loops":"plug_",
+                "Signals":"plug_",
+                "Alarms":"alarm_"}
 
-class SmtgConfigParser(ConfigParser):
+class EmpConfigParser(ConfigParser):
     """At its heart, this config parser is a SafeConfigParser. The
     only added functionality is the default configurations automatically
     added and automatic config file validation. Oh, and there are some
@@ -86,10 +86,10 @@ class SmtgConfigParser(ConfigParser):
         if type(name) is not str: 
             raise TypeError("Plugin Name must be a string")
         
-        attach_name="plugin_"+name
+        attach_name="plug_"+name
         try: return TinyCfgPrsr(dict(self.items(attach_name)))
         except:
-            attach_name="alerter_"+name
+            attach_name="alarm_"+name
             try: return TinyCfgPrsr(dict(self.items(attach_name)))
             except: return TinyCfgPrsr({})
         
@@ -115,12 +115,12 @@ class SmtgConfigParser(ConfigParser):
                 try:
                     attach.plugin_object.save() #make the plugin save before pulling the configs
                     
-                    if isinstance(attach.plugin_object, Alerter):
+                    if isinstance(attach.plugin_object, Alarm):
                         for key in attach.plugin_object.config.keys():
-                            self.set("alerter_"+attach.plugname, str(key), str(attach.plugin_object.config[key]))
+                            self.set("alarm_"+attach.plugname, str(key), str(attach.plugin_object.config[key]))
                     else:
                         for key in attach.plugin_object.config.keys():
-                            self.set("plugin_"+attach.plugname,key,str(attach.plugin_object.config[key]))
+                            self.set("plug_"+attach.plugname,key,str(attach.plugin_object.config[key]))
                         #else, it doesn't matter 
                 except Exception as e: 
                     logging.exception(e)

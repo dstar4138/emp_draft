@@ -1,0 +1,44 @@
+[Documentation]
+Author = Alexander Dean
+Version = 0.1
+Website = dstar4138.com
+Copyright = Apache v2
+Description = This alerter uses an SMTP server to send you an email when you get alerted.
+
+#
+# DONT CHANGE ANYTHING IN CORE! That is unless you need the cmd name to 
+# be something other than 'emailalerter'.
+#
+[Core]
+Name = Email Alerter
+Module = EmailAlerter
+Cmd = emailalerter
+
+# Here are the default variables which are user configurable that will show up
+# in your cfg file. Don't change the variables here, since they will not get 
+# re-read. Change them in your personal configuration file.
+[Defaults]
+# Address is a list of addresses to send the alert to
+address = 
+
+# This is what will show up in the subject line
+subject = SMTG Alert
+
+# These are what show up before and after the alert message.
+header = This is a message from your smtg daemon: 
+footer = Sincerely, your smtg daemon.
+
+# You need access to an email server that uses SMTP.
+smtp-host = 
+smtp-port = 
+smtp-user = USERNAM@DOMAIN
+smtp-pass = PASSWORD
+# If you don't have a personal email server, check out what Gmail can do
+# for you:  http://mail.google.com/support/bin/answer.py?answer=13287
+
+# The EmailAlerter also supports using SSL to connect to your SMTP server,
+# although if SSL is set to false, then EmailAlerter defaults to TLS
+use-ssl = false
+ssl-uname = 
+ssl-pass =
+ssl-port = 

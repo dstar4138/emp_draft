@@ -32,29 +32,30 @@ import logging
 from socket import timeout
 from threading import Thread
 
-import smtg.comm.routing as routing
-import smtg.config.defaults as smtgconf
-from smtg.attach.management import AttachmentManager
-from smtg.config.logger import setup_logging
-from smtg.config.SmtgConfigParser import SmtgConfigParser
+import empbase.comm.routing as routing
+import empbase.config.defaults as empconf
+from empbase.comm.interface import Interface
+from empbase.attach.management import AttachmentManager
+from empbase.config.logger import setup_logging
+from empbase.config.empconfigparser import EmpConfigParser
 
-from smtg.daemon.RDaemon import RDaemon
-from smtg.daemon.daemonipc import DaemonServerSocket
-from smtg.comm.messages import makeErrorMsg, makeCommandMsg,  \
+from empbase.daemon.RDaemon import RDaemon
+from empbase.daemon.daemonipc import DaemonServerSocket
+from empbase.comm.messages import makeErrorMsg, makeCommandMsg,  \
                                       makeMsg, strToMessage, COMMAND_MSG_TYPE,  \
                                       ERROR_MSG_TYPE 
 
 def notimplemented(dest):
     routing.sendMsg(makeErrorMsg("Action is not implemented yet!!",None,dest))
 
-def checkSmtgStatus():
+def checkEmpStatus():
     """ Checks whether the SmtgDaemon is currently running or not."""
     import os
-    return os.path.exists(smtgconf.default_configs["Daemon"]["pid-file"])
+    return os.path.exists(empconf.default_configs["Daemon"]["pid-file"])
 
 
 
-class SmtgDaemon(RDaemon):
+class EmpDaemon(RDaemon):
     """ The Daemon for SMTG, all communication to this daemon goes through smtgd.py
     or the comm port via a DaemonClientSocket. To connect, get the port number and
     then connect either with a regular UDP-8 encoded TCP socket or the 
@@ -66,7 +67,7 @@ class SmtgDaemon(RDaemon):
     want to know how to register your interface with the local smtg daemon.
     """
     
-    def __init__(self, configfile=None, dprg="smtgd.py"):
+    def __init__(self, configfile=None, dprg="empd.py"):
         """Load the configuration files, create the CommRouter, and then create 
         the daemon. 
         """
@@ -75,7 +76,7 @@ class SmtgDaemon(RDaemon):
         self.fm_start_time = time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime(self.start_time))
 
         # now set up the internal configuration via a config file.
-        self.config=SmtgConfigParser(configfile)
+        self.config=EmpConfigParser(configfile)
         self.config.validateInternals()
         setup_logging(self.config)
 
@@ -84,6 +85,11 @@ class SmtgDaemon(RDaemon):
                               pchannel=self.config.getint("Daemon", "port"),
                               dprog=dprg,
                               dargs=configfile)
+         
+    def startup(self):     
+        if self.config.getboolean("Daemon", "boot-launch"):
+            RDaemon.start(self)
+         
          
     def stop(self):
         """ Stops the daemon but then waits a while to make sure all the threads are done. """
@@ -116,14 +122,14 @@ class SmtgDaemon(RDaemon):
                 routing.sendMsg(makeMsg("SMTG-D Running since: "+self.fm_start_time,source,dest))
             elif action.getValue() == "cmds":
                 routing.sendMsg(makeMsg(["status","plugins","cmds","attachments", "activate","deactivate",
-                                         "alerters","plugid","alertid","var","cvar","help"],
+                                         "alarms","plugid","alertid","var","cvar","help"],
                                 source,dest))
             elif action.getValue() == "plugins":
                 routing.sendMsg(makeMsg(self.aman.getAllNames(),source,dest))
             elif action.getValue() == "plugins":
-                routing.sendMsg(makeMsg(self.aman.getPluginNames(),source,dest))
-            elif action.getValue() == "alerters":
-                routing.sendMsg(makeMsg(self.aman.getAlerterNames(),source,dest))
+                routing.sendMsg(makeMsg(self.aman.getPlugNames(),source,dest))
+            elif action.getValue() == "alarms":
+                routing.sendMsg(makeMsg(self.aman.getAlarmNames(),source,dest))
             elif action.getValue() == "id":
                 try:
                     result = self.aman.getAttachmentID(action.get("args")[0])
@@ -131,7 +137,7 @@ class SmtgDaemon(RDaemon):
                         routing.sendMsg(makeErrorMsg("name does not exist.",None,dest))
                     else:routing.sendMsg(makeMsg(result,source,dest))
                 except:
-                    routing.sendMsg(makeErrorMsg("alertid needs an argument.",None,dest))
+                    routing.sendMsg(makeErrorMsg("id needs an argument.",None,dest))
             elif action.getValue() == "idsearch": notimplemented(dest) #TODO: implement idsearch command to search for an id
             elif action.getValue() == "var":notimplemented(dest) #TODO: implement var command to get internal variables
             elif action.getValue() == "cvar":notimplemented(dest) #TODO: implement cvar to change variables
@@ -163,7 +169,7 @@ class SmtgDaemon(RDaemon):
         cmds = {"status":"get the daemon status, or the status of a plugin/alert given the id.",
                 "plugins": "get a list of plug-ins ids to names.",
                 "cmds": "get the daemon command list.",
-                "alerters": "get a list of alerters ids to names.",
+                "alarms": "get a list of alarms ids to names.",
                 "id": "given an attachments name, it will return the ID",
                 "idsearch": "returns whether a given id exists",
                 "var": "returns all internal variables and their values",
@@ -220,14 +226,14 @@ class SmtgDaemon(RDaemon):
         """
         try:
             # load the plug-in manager now and search for the plug-ins.
-            self.aman = AttachmentManager(smtgconf.attachment_dirs, 
+            self.aman = AttachmentManager(empconf.attachment_dirs, 
                                           self.config)
             self.aman.collectPlugins()
             
             #activates the attachments based on user cfg file. 
             # if the attachment was a SignalPlugin, it will throw the plug-ins
             # run() function into a new thread.
-            self.aman.activatePlugins()
+            self.aman.activateAttachments()
     
             # starts the comm router running to send messages!!
             routing.register("daemon",self)
@@ -243,7 +249,7 @@ class SmtgDaemon(RDaemon):
             while self.isRunning():
                 
                 # get all active loop plug-ins
-                activePlugins = self.aman.getLoopPlugins()
+                activePlugins = self.aman.getLoopPlugs()
                 if activePlugins:
                     for plugin in activePlugins:
                         if plugin.plugin_object.is_activated:
@@ -265,7 +271,7 @@ class SmtgDaemon(RDaemon):
                 except: pass
                 
             #Stop all signal threads
-            for signal in self.aman.getSignalPlugins():
+            for signal in self.aman.getSignalPlugs():
                 signal.plugin_object.deactivate()    
             
             #flush the router, and save all configurations.
@@ -298,7 +304,7 @@ class SmtgDaemon(RDaemon):
         
                 # create an interface out of the socket
                 # LATER: authentication can go here, before they connect. (eg logging in)
-                interface = routing.Interface(client_socket)
+                interface = Interface(client_socket)
                 logging.debug("identifier: %s"% interface.ID)
             
                 # since there are abilities that this person can perform throw

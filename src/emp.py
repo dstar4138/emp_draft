@@ -24,18 +24,18 @@ See the License for the specific language governing permissions and
 limitations under the License. 
 """
 
-__usage__ = "smtg [-h | -a | -i | -l | -t T [ -g | -? C ]] [command [args ...]]"
+__usage__ = "emp [-h | -a | -i | -l | -t T [ -g | -? C ]] [-n] [command [args ...]]"
 __desc__ = '''
-SMTG is the interface for the SMTG Daemon. This is a full "general case"  
-interface for handling most (if not all) commands for every plug-in, alerter, 
+emp is the interface for the EMP Daemon. This is a full "general case"  
+interface for handling most (if not all) commands for every plug-in, alarm, 
 and the daemon itself. The interactive mode is a simple Curses interface for 
 looking cool while monitoring the hell out of your plug-ins. 
 '''
 import sys
 import argparse
-from smtg.daemon.SmtgDaemon import checkSmtgStatus, SmtgDaemon
-from smtg.comm.messages import makeCommandMsg,strToMessage, ERROR_MSG_TYPE
-from smtg.daemon.daemonipc import DaemonClientSocket
+from empbase.daemon.EmpDaemon import checkEmpStatus, EmpDaemon
+from empbase.comm.messages import makeCommandMsg,strToMessage, ERROR_MSG_TYPE
+from empbase.daemon.daemonipc import DaemonClientSocket
 #import curses
 
 
@@ -55,6 +55,8 @@ optional arguments:
   -t T, --target T  Change the command target by name/id. (Defaults to the
                     pointing at the daemon).
   -g, --tcmds       Get target commands
+  -n, --nowait      Don't wait for a response from the daemon for the 
+                    command sent.
   -? C, --ask C     Ask the target how to use the command
 """)
 
@@ -76,6 +78,7 @@ def setupParser():
     parser.add_argument("-t","--target", nargs=1, metavar="T", help="Change the command target by name/id. (Defaults to the pointing at the daemon).")
     parser.add_argument("-g","--tcmds", action="store_true", help="Get target commands")
     parser.add_argument("-?", "--ask", nargs=1, metavar="C",  help="Ask the target how to use the command")
+    parser.add_argument("-n", "--nowait", action="store_true")
     
     parser.add_argument("command", nargs='*', help="A command for the target and any arguments for it.")
     return parser
@@ -96,7 +99,7 @@ def main():
     args = parser.parse_args()
     #handle the commands given
     if len(sys.argv) == 1:
-        print("Usage:",__usage__,"\n\nType 'smtg -h' for some help.")
+        print("Usage:",__usage__,"\n\nType 'emp -h' for some help.")
         return
     
     print(args)
@@ -105,8 +108,8 @@ def main():
     else:
         try:
             # we will be communicating with the daemon
-            if not checkSmtgStatus(): print("Error: Daemon not running!");return
-            daemon = DaemonClientSocket(port=SmtgDaemon().getComPort())
+            if not checkEmpStatus(): print("Error: Daemon not running!");return
+            daemon = DaemonClientSocket(port=EmpDaemon().getComPort())
             daemon.connect()
             msg = strToMessage(daemon.recv())
             if msg.getValue() != "proceed": print("Error: Couldn't connect to the daemon.");return
@@ -117,17 +120,17 @@ def main():
             if args.list:
                 daemon.send(makeCommandMsg("plugins",myID))
                 plugs = strToMessage(daemon.recv()).getValue()
-                daemon.send(makeCommandMsg("alerters",myID))
+                daemon.send(makeCommandMsg("alarms",myID))
                 alerters = strToMessage(daemon.recv()).getValue()
             
                 #print the list all pretty like:
                 print("Attached targets and their temp IDs:")
-                print("   Plugins:")
+                print("   Plugs:")
                 for k in plugs.keys():
                     print("     %s" % plugs[k][1])
                     print("        Name: %s"%plugs[k][0])
                     print("        ID: %s"%k)
-                print("\n   Alerters:")
+                print("\n   Alarms:")
                 for k in alerters.keys():
                     print("     %s" % alerters[k][1])
                     print("        Name: %s"%alerters[k][0])
@@ -175,17 +178,20 @@ def main():
                             print("  %s  -%s"%(cmd,cmds[cmd]))
                     else:
                         daemon.send(makeCommandMsg(args.command[0], myID, dest=args.target[0], args=args.command[1:]))
-                        result = strToMessage(daemon.recv())
-                        if result.getType() == ERROR_MSG_TYPE:
-                            print("ERROR:",result.getValue())
+                        
+                        if not args.nowait:
+                            result = strToMessage(daemon.recv())
+                            if result.getType() == ERROR_MSG_TYPE:
+                                print("ERROR",result.getValue())
+                            else:
+                                # since this is a general case interface, we dont really know 
+                                # how to interpret the result of an argument. But this can
+                                # be utilized in a script or a higher level interface. if you 
+                                # want to call smtg through your program be sure you can 
+                                # handle JSON 
+                                print(result.getValue()) 
                         else:
-                            # since this is a general case interface, we dont really know 
-                            # how to interpret the result of an argument. But this can
-                            # be utilized in a script or a higher level interface. if you 
-                            # want to call smtg through your program be sure you can 
-                            # handle JSON 
-                            print(result.getValue()) 
-                
+                            print("Command sent.")
             
         except:
             print("Error: Couldn't connect to the daemon.")
