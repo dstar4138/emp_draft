@@ -1,10 +1,10 @@
-SMTG: Social Monitor for the Terminal Geek
+EMP: Extenable Monitoring Platform
 ==========================================
 
 Short Description:
 ------------------
 
-SMTG is the foundation and means of extension for monitoring whatever your
+EMP is the foundation and means of extension for monitoring whatever your
 heart desires.
 
 
@@ -12,8 +12,8 @@ heart desires.
 Longer Description:
 -------------------
 
-SMTG has three parts: the daemon, the plug-ins, and the interfaces. The 
-daemon sits and runs the feed loop along with facilitating communication 
+EMP has four parts: the daemon, the plug-ins, the alarms and the interfaces.  
+The daemon sits and runs the feed loop along with facilitating communication 
 between the interfaces and the plug-ins. Interfaces are what you look at when
 you are running the program, a bunch of interfaces can be connected to the 
 daemon at once.
@@ -25,15 +25,15 @@ alerts, updates, and messages from the daemon simultaneously (more or less).
 
 The plug-ins are what do all the hard work. There are two types of plug-ins 
 FeedPlugins and AlertPlugins. Feed plug-ins are the most common and easiest to 
-make and use. They just run through the SMTG feed loop and can run commands 
+make and use. They just run through the EMP feed loop and can run commands 
 sent to them via the daemon from the interfaces. Most if not all of the below 
 examples of plug-ins will use this type. 
 
-However, the real power and difference of SMTG to feed readers, are the 
+However, the real power and difference of EMP to feed readers, are the 
 AlertPlugins. These are instantaneous triggers that can do whatever you need 
 them to do. For example, say you make a simple bluetooth arduino trigger on 
 your dorm door that sends a message back to your computer when someone enters 
-your room. You can have an SMTG AlertPlugin be triggered and send a message to 
+your room. You can have an EMP AlertPlugin be triggered and send a message to 
 all of your interfaces letting them know of the event. Instant security system!  
 
 Here are a couple more examples of plug-ins that are or will be made in the 

@@ -20,11 +20,10 @@ limitations under the License.
 #  your program. Please consult this page for more information:
 #    http://wiki.python.org/moin/IntegratingPythonWithOtherLanguages
 #
-__version__="0.8"
+__version__="0.9"
 
 from threading import Thread
 from yapsy.IPlugin import IPlugin
-from empbase.comm.routee import Routee
 
 # Importance changes its location in the list of updates.
 #   The lower the number the closer to the beginning it is. You can
@@ -34,8 +33,9 @@ LOW_IMPORTANCE  = 100
 MID_IMPORTANCE  = 50
 HIGH_IMPORTANCE = 0
 
-class EmpAttachment(IPlugin, Routee):
-    """The base of all plugs and alarms for the SMTG platform. Please do not 
+
+class EmpAttachment(IPlugin):
+    """ The base of all plugs and alarms for the SMTG platform. Please do not 
     use this as your interface. Use either LoopPlug, or SignalPlug as your
     interface for your new plug-in since SMTG separates it's internals
     based on those.
@@ -43,19 +43,12 @@ class EmpAttachment(IPlugin, Routee):
     def __init__(self, conf):
         self.config = conf
         IPlugin.__init__(self)
-        self.makeactive = self.config.getboolean("makeactive",True)
-        
-    def handle_msg(self, msg):
-        """ Inherited from Routee, this is what runs when the Plug-in gets
-        a message from somewhere. This is here just to remind you that you
-        NEED to implement it.
-        """
-        raise NotImplementedError("handle_msg() not implemented") 
+        self.makeactive = self.config.getboolean("makeactive",True) 
         
     def get_commands(self):
-        """Returns a dict object of the commands, the name to the description.
-        This is used by SMTG to update its help screen, it can also be asked
-        for by sending a command to the daemon for all possible commands.
+        """ Returns a list object of the Command objs that the attachment has
+        made triggers for. This is used by SMTG to update its help screen, as
+        well as the messaging router to speed up command protocols. 
         """
         raise NotImplementedError("get_commands() not implemented")
 
@@ -68,14 +61,42 @@ class EmpAttachment(IPlugin, Routee):
         self.config.set("makeactive", self.makeactive)
 
 
-class LoopPlug(EmpAttachment):
+class EmpPlug(EmpAttachment):
+    def __init__(self, conf):
+        EmpAttachment.__init__(self, conf)
+        
+    def get_events(self):
+        """ This is the list of Event objects that the Plug can cause. Each
+        Event will be registered with the EventManager and the daemon, so that
+        Alarms can subscribe to them. You as a plug don't have to worry about 
+        this, just that you trigger the event's the correct way. See the Event
+        object description. 
+        """
+        raise NotImplementedError("get_events() not implemented")
+
+
+class EmpAlarm(EmpAttachment):
+    """This is the base method of alerting. """
+    
+    def __init__(self, conf):
+        """ Create the foundation of an alert with a dictionary of internal 
+        variables, passed to it via the daemon/AttachmentManager.
+        """
+        EmpAttachment.__init__(self, conf)
+    
+    def alert(self, *args):
+        """ Runs the alert process. This is the core of an alert. """
+        raise NotImplementedError("alert() not implemented")
+    
+
+class LoopPlug(EmpPlug):
     """Of the two arch-types of plugs this is the most commonly used.
     The LoopPlug is a plug-in who pulls information from a source on 
     a regular interval. The importance of the LoopPlugin decides when it
     gets to be pulled in the list of other LoopPlugins.
     """
     def __init__(self, conf, importance=MID_IMPORTANCE):
-        EmpAttachment.__init__(self, conf)
+        EmpPlug.__init__(self, conf)
         self.update_importance=self.config.getint("importance",importance)
 
     def change_importance(self, importance):
@@ -89,7 +110,7 @@ class LoopPlug(EmpAttachment):
         raise NotImplementedError("update() not implemented") 
 
 
-class SignalPlug(EmpAttachment): 
+class SignalPlug(EmpPlug): 
     """The SignalPlug type waits for a message rather than pulling on 
     an interval like the LoopPlug. These are necessary for high 
     'importance' items, such as for alert systems such as un-authorized 
@@ -118,18 +139,3 @@ class SignalPlug(EmpAttachment):
         needs to be overwritten by the subclass.
         """
         raise NotImplementedError("run() not implemented")
-
-
-class Alarm(EmpAttachment):
-    """This is the base method of alerting. """
-    
-    def __init__(self, conf):
-        """ Create the foundation of an alert with a dictionary of internal 
-        variables, passed to it via the daemon/AttachmentManager.
-        """
-        EmpAttachment.__init__(self, conf)
-    
-    def alert(self, *args):
-        """ Runs the alert process. This is the core of an alert. """
-        raise NotImplementedError("alert() not implemented")
-    

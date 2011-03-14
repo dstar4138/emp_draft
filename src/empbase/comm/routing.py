@@ -21,7 +21,7 @@ from threading import Thread
 #import smtg.comm.registry as registry
 from empbase.comm.messages import strToMessage, makeMsg, ALERT_MSG_TYPE
 from empbase.comm.interface import Interface
-from empbase.attach.attachments import Alarm
+from empbase.attach.attachments import EmpAlarm
 
 ## Routing protocol:
 ##   The following are the functions that should be used for
@@ -135,7 +135,7 @@ def startRouter(base=None, triggermethod=lambda:False):
                     for id in list( _routees.keys()):
                         logging.debug("sending message to %s: %s"% (id, msg))
                         _,ref = _routees.get(id)
-                        if isinstance(ref, Interface) or isinstance(ref, Alarm):
+                        if isinstance(ref, Interface) or isinstance(ref, EmpAlarm):
                             Thread(target=ref.handle_msg, args=(msg,)).start()
                         
                 # if not send it to the daemon to handle.

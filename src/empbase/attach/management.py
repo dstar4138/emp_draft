@@ -14,12 +14,15 @@ limitations under the License.
 """
 
 from empbase.attach.VariablePluginManager import VariablePluginManager
-from empbase.attach.attachments import Alarm, LoopPlug, SignalPlug
+from empbase.attach.attachments import EmpAlarm, LoopPlug, SignalPlug
 
 # the internal categories that the attachment manager can handle.
-ATTACH_CAT = {"Alarms":Alarm,
-              "Loops": LoopPlug,
-              "Signals": SignalPlug}
+LOOPS = "Loops"
+ALARMS = "Alarms"
+SIGNALS = "Signals"
+ATTACH_CAT = {ALARMS:EmpAlarm,
+              LOOPS: LoopPlug,
+              SIGNALS: SignalPlug}
 
 # the expected extension of description files for SMTG attachments
 ATTACH_EXT = "emp"
@@ -46,20 +49,20 @@ class AttachmentManager(VariablePluginManager):
         """ Get all the loop plug-ins that are loaded. This is used in the pull
         loop thread for updating all of them. 
         """
-        return sorted( self.getPluginsOfCategory("Loops"),
+        return sorted( self.getPluginsOfCategory(LOOPS),
                        key=lambda x: x.plugin_object.update_importance)
         
     def getSignalPlugs(self):
         """ Utility function for getting all the signal plugins. """
-        return self.getPluginsOfCategory("Signals")
+        return self.getPluginsOfCategory(SIGNALS)
     
     def getAlarms(self):
         """ Utility function for getting all the Alerter attachments. """
-        return self.getPluginsOfCategory("Alarms")
+        return self.getPluginsOfCategory(ALARMS)
     
     def getPlugs(self):
-        return self.getPluginsOfCategory("Signals").extend(
-                            self.getPluginsOfCategory("Loops"))
+        return self.getPluginsOfCategory(SIGNALS).extend(
+                            self.getPluginsOfCategory(LOOPS))
         
     def getAllNames(self):
         """ Returns a dictionary of IDs to (plugname, name) for every 
@@ -92,5 +95,9 @@ class AttachmentManager(VariablePluginManager):
                 return attach.plugin_object.ID
         return None
     
+    def getAlarmByID(self, aid):
+        for alarm in self.getAlarms():
+            if aid is alarm.plugin_object.ID:
+                return alarm.plugin_object
     
     

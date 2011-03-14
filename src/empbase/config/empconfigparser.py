@@ -15,7 +15,7 @@ limitations under the License.
 
 import os, sys, logging
 from configparser import ConfigParser
-from empbase.attach.attachments import Alarm
+from empbase.attach.attachments import EmpAlarm
 from empbase.config.defaults import default_configs, default_cfg_files, writeto_cfg_file
 
 CATEGORY_MAP = {"Loops":"plug_",
@@ -115,7 +115,7 @@ class EmpConfigParser(ConfigParser):
                 try:
                     attach.plugin_object.save() #make the plugin save before pulling the configs
                     
-                    if isinstance(attach.plugin_object, Alarm):
+                    if isinstance(attach.plugin_object, EmpAlarm):
                         for key in attach.plugin_object.config.keys():
                             self.set("alarm_"+attach.plugname, str(key), str(attach.plugin_object.config[key]))
                     else:

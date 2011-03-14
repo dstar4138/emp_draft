@@ -7,12 +7,11 @@ definitely more time consuming...
 
 * Finish the plug-ins added to the plugins directory
 * Finish the alerters added to the alerters directory
-* Write the 'curses' interface for smtg.py
+* Write the 'curses' interface for emp.py.
 * Add more methods of alerting
 * Add functionality for requesting alert methods in plug-ins
-* write the setup.py script for installing smtg.
+* write the setup.py script for installing emp.
 * Fix defaults for other operating system types.
-* Rename SMTG to EMP: Extensible Monitoring Platform and update all references.
 
 Wishlist
 --------

@@ -3,7 +3,7 @@ Author = Alexander Dean
 Version = 0.1
 Website = dstar4138.com
 Copyright = Apache v2
-Description = This alerter uses an SMTP server to send you an email when you get alerted.
+Description = This alarm uses an SMTP server to send you an email when you get alerted.
 
 #
 # DONT CHANGE ANYTHING IN CORE! That is unless you need the cmd name to 
@@ -22,7 +22,7 @@ Cmd = emailalerter
 address = 
 
 # This is what will show up in the subject line
-subject = SMTG Alert
+subject = Monitor Alert
 
 # These are what show up before and after the alert message.
 header = This is a message from your smtg daemon: 

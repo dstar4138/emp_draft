@@ -1,12 +1,10 @@
 #!/usr/bin/env python3.2
 """
-Social Monitor for the Terminal Geek (SMTG) - 
-  A way for the socially inept to stay connected!
- 
-By: Alexander Dean <dstar@csh.rit.edu> 
+Extensible Monitoring Platform (EMP) 
+    By: Alexander Dean <dstar@csh.rit.edu> 
 
 For support please visit Alexander's blog or even the 
-SMTG project page: http://code.dstar4138.com/view?pid=2
+EMP project page: http://code.dstar4138.com/view?pid=2
 """
 
 __copyright__ = """
@@ -26,7 +24,7 @@ limitations under the License.
 
 __usage__ = "emp [-h | -a | -i | -l | -t T [ -g | -? C ]] [-n] [command [args ...]]"
 __desc__ = '''
-emp is the interface for the EMP Daemon. This is a full "general case"  
+Emp is the interface for the EMP Daemon. This is a full "general case"  
 interface for handling most (if not all) commands for every plug-in, alarm, 
 and the daemon itself. The interactive mode is a simple Curses interface for 
 looking cool while monitoring the hell out of your plug-ins. 
@@ -40,8 +38,7 @@ from empbase.daemon.daemonipc import DaemonClientSocket
 
 
 def help():
-    print(__usage__)
-    print("%s"%__desc__)
+    print( "%s\n%s" % (__usage__, __desc__) )
     print("""
 positional arguments:
   command           A command for the target and any arguments for it.
@@ -62,10 +59,10 @@ optional arguments:
 
 
 def setupParser():
-    """Sets up the parser for smtg, this can be expanded when necessary."""
+    """Sets up the parser for emp, this can be expanded when necessary."""
     parser = argparse.ArgumentParser(description=__desc__,
                                      usage=__usage__,
-                                     prog="smtg",
+                                     prog="emp",
                                      add_help=False)
     parser.set_defaults(target=['daemon'])
     
