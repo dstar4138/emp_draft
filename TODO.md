@@ -6,12 +6,14 @@ this TODO list. They are in no particular order, and some are going to be
 definitely more time consuming...
 
 * Finish the plug-ins added to the plugins directory
-* Finish the alerters added to the alerters directory
+* Finish the alarms added to the alarms directory
 * Write the 'curses' interface for emp.py.
 * Add more methods of alerting
 * Add functionality for requesting alert methods in plug-ins
-* write the setup.py script for installing emp.
+* Finish message routing for plugs so that Command objs are manditory
+* Write the setup.py script for installing emp.
 * Fix defaults for other operating system types.
+
 
 Wishlist
 --------
@@ -20,6 +22,6 @@ Wishlist
 * Jabber Signal Plugin for chats
 * Facebook Plugin
 * Daemon security (Add username/password capability, tunneling?)
-* GUI interface in pyQT4
-* A backported interface in python2.6 for mobile devices
+* "General-case" GUI interface in pyQT4
+* A backported interface in python2.6 or 2.5 for mobile devices? bluetooth?
 
