@@ -58,3 +58,6 @@ if theres anything you would either like to add or do yourself.
 Contributing
 ------------
 Please do! It would be nice to have some help on this! Just shoot me an email.
+Right now EMP is not fully working, so if you would like to be put on the list
+of people I email when its ready, let me know as well.
+
