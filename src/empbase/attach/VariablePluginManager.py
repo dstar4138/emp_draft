@@ -16,7 +16,6 @@ import os
 import sys
 import re
 import logging
-import empbase.comm.routing as routing
 from yapsy.IPlugin import IPlugin
 from yapsy.PluginInfo import PluginInfo
 from yapsy.PluginManager import PluginManager
@@ -28,7 +27,7 @@ class EmpAttachmentInfo(PluginInfo):
         self.defaults = {}
         self.plugname = str(plugin_name).strip().lower().replace(" ", "")
         re.sub(r'[^\w]', '', self.plugname)
-        
+        self.module=""
         PluginInfo.__init__(self, plugin_name, plugin_path)
         
         
@@ -49,11 +48,11 @@ class EmpAttachmentInfo(PluginInfo):
 class VariablePluginManager(FilteredPluginManager):
     """Makes creating a filtered default plug-in manager easier"""
     
-    def __init__(self, cfg_p, categories_filter={"Default":IPlugin}, 
+    def __init__(self, cfg_p, router, categories_filter={"Default":IPlugin}, 
                                 directories_list=None, 
                                 plugin_info_ext="yapsy-plugin"):
         """ Creates the base VariablePluginManagaer. """
-        decorated_object = DefaultPluginManager(cfg_p,
+        decorated_object = DefaultPluginManager(cfg_p, router,
                                                 categories_filter,
                                                 directories_list,
                                                 plugin_info_ext)
@@ -77,13 +76,14 @@ class DefaultPluginManager(PluginManager):
     each plug-in. These variables are read in and can be passed into the plug-in
     by using a dict object. See smtg.plugin.smtgplugin
     """
-    def __init__(self, cfg_p, 
+    def __init__(self, cfg_p, router,
                  categories_filter={"Default":IPlugin}, 
                  directories_list=None, 
                  plugin_info_ext="yapsy-plugin"):
         PluginManager.__init__(self, categories_filter, directories_list, plugin_info_ext)
         self.setPluginInfoClass(EmpAttachmentInfo)
         self.config = cfg_p
+        self.router = router
     
         
     def loadPlugins(self, callback=None):
@@ -139,7 +139,9 @@ class DefaultPluginManager(PluginManager):
                                 plugin_info.category = current_category
                                 
                                 #now we will register the plugin with the router
-                                routing.register(plugin_info.plugname, plugin_info.plugin_object)
+                                self.router.register( plugin_info.plugname,
+                                                      plugin_info.module,  
+                                                      plugin_info.plugin_object )
                                 
                                 self.category_mapping[current_category].append(plugin_info)
                                 self._category_file_mapping[current_category].append(candidate_infofile)
@@ -177,6 +179,8 @@ class DefaultPluginManager(PluginManager):
                 plugin_info.plugname = config_parser.get("Core","Cmd")
             if config_parser.has_option("Core","load"):
                 plugin_info.load = config_parser.getboolean("Core","load")
+            if config_parser.has_option("Core","Module"):
+                plugin_info.module = config_parser.get("Core","Module")
         
         if config_parser.has_section("Defaults"):
             for option in config_parser.options("Defaults"):

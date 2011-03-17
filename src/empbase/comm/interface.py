@@ -20,13 +20,13 @@ class Interface(Routee):
     Routees. 
     """
     
-    def __init__(self, socket):
+    def __init__(self, router, socket):
         """ Create an Interface using a socket. Assumes that it is of the
         type DaemonServerSocket.
         """
-        from empbase.comm.routing import register
         self._socket = socket
-        register("interface", self)
+        self.router = router
+        self.router.register("interface", self)
         
     def handle_msg(self, msg):
         """ Interfaces "handle the message" by sending it to the 
@@ -36,7 +36,6 @@ class Interface(Routee):
         
     def receiver(self):
         """ Runs the receiving portion of the interface. """
-        from empbase.comm.routing import sendMsg, deregister
         from empbase.comm.messages import strToMessage
         
         #LATER: Add security to this portion. Adjust message handling for privlage level?
@@ -47,12 +46,12 @@ class Interface(Routee):
             while 1:
                 msg = self._socket.recv()
                 if not msg: break
-                else: sendMsg(strToMessage(msg))
+                else: self.router.sendMsg(strToMessage(msg))
         except Exception as e: 
             logging.error("interface died because: %s"%e)
         finally:
             logging.debug("ending interface comm")
-            deregister(self.ID)
+            self.router.deregister(self.ID)
             
     def close(self):
         """ Closes the communication to the Interface. """

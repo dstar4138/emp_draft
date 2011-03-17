@@ -14,13 +14,12 @@ limitations under the License.
 """
 import random
 import logging
-from socket import timeout
 from plugs.timerplug.mytimer import MyTimer
 
-import empbase.comm.routing as routing
+from empbase.comm.command import Command
+from empbase.registration.events import Event
 from empbase.attach.attachments import SignalPlug
-from empbase.daemon.daemonipc import DaemonServerSocket
-from empbase.comm.messages import COMMAND_MSG_TYPE, makeErrorMsg, makeMsg, makeAlertMsg
+from empbase.daemon.daemonipc import DaemonServerSocket, timeout
 
 DEFAULT_PORT = 8081
 DEFAULT_MAXRAND = 360
@@ -28,17 +27,6 @@ DEFAULT_MINRAND = 20
 
 LOWEST_RAND = 1
 
-# See the readme for more information on these commands.
-TIMER = {"status": "Returns the status of a given timer, or all of them.",
-         "timers" : "Return a printout of the timers' status.",
-         "kill"  : "Stops all timers/connections",
-         "stopall" : "Stops all timers!",
-         "closeall" : "Closes all open connections.",
-         "rm"    : "Remove a timer by its index",
-         "arand" : "Add a timer for a random amount of time between two numbers.",
-         "port"  : "Get the port to connect to on the current host that the alert msg will signal down.",
-         "add"   : "Add with three variables, first is seconds, second is minutes, third is hours."}
-    
 class TimerPlug(SignalPlug):
     """The Timer plug-in will be the most simplistic SignalPlugin. It will
     create a timer in accordance with the time you need, and then send an 
@@ -65,6 +53,21 @@ class TimerPlug(SignalPlug):
         #                                 externalBlock=self.config.getboolean("Daemon","local-only"),
         #                                 allowAll=self.config.getboolean("Daemon", "allow-all"))
         
+        # See the readme for more information on these commands.
+        self._commands = [ #TODO: fix all triggers
+                Command("status",   trigger=self.getstatus, help="Returns the status of a given timer, or all of them."),
+                Command("timers",   trigger=self.gettimers, help="Return a printout of the timers' status."),
+                Command("kill",     trigger=self.deactivate, help="Stops all timers/connections"),
+                Command("stopall",  trigger=self.killtimers, help="Stops all timers!"),
+                Command("closeall", trigger=self.killconnections, help="Closes all open connections."),
+                Command("rm",       trigger=self.removetimer, help="Remove a timer by its index"),
+                Command("arand",    trigger=self.arand, help="Add a timer for a random amount of time between two numbers."),
+                Command("port",     trigger=self.getport, help="Get the port to connect to on the current host that the alert msg will signal down."),
+                Command("add",      trigger=self.add, help="Add with three variables, first is seconds, second is minutes, third is hours.")]
+        
+        self.EVENT_timer = Event(self.ID, "Timer went off!")
+        self._events = [self.EVENT_timer]
+        
 
     def save(self):
         """ Save my internal configuration."""
@@ -75,71 +78,61 @@ class TimerPlug(SignalPlug):
         
     def get_commands(self):
         """ Returns the command dictionary! """
-        return TIMER
-
-    def handle_msg(self, msg):
-        try:
-            if msg.get("message") != COMMAND_MSG_TYPE: return
-            
-            #since its a command, lets handle it.
-            dest = msg.getSource()
-            if msg.getValue() == "rm":
-                self.removetimer(int(msg.get("args")[0]), dest)
-            elif msg.getValue() == "arand":
-                if len(msg.get("args")) == 1: #set min=args
-                    min = int(msg.get("args")[0])
-                    if min < 1:
-                        routing.sendMsg(makeErrorMsg("Value given for arand must be larger than 1.", self.ID,dest))
-                    else:    
-                        self.addtimer(random.randint(min, self._maxrand), dest)
-                elif len(msg.get("args")) ==2: #set both max and min
-                    min = int(msg.get("args")[0])
-                    max = int(msg.get("args")[1])
-                    if min < LOWEST_RAND or max < LOWEST_RAND:
-                        routing.sendMsg(makeErrorMsg("Value given for arand must be larger than "+str(LOWEST_RAND), self.ID,dest))
-                        
-                    #if max and min are switched, then swap them before testing.
-                    elif max > min: max, min = min, max
-                    
-                    self.addtimer(random.randint(min, max), dest)
-                else: #use the variables from the config file
-                    self.addtimer(random.randint(self._minrand, self._maxrand), dest)
-            elif msg.getValue() == "status":
-                routing.sendMsg(makeMsg("There are "+str(len(self._timers))+" timers running.",self.ID,dest))
-                
-            elif msg.getValue() == "port":
-                routing.sendMsg(makeMsg(self._port,self.ID,dest))
-                
-            elif msg.getValue() == "kill":     self.deactivate()
-            elif msg.getValue() == "closeall": self.killconnections()
-            elif msg.getValue() == "stopall":  self.killtimers()
-            elif msg.getValue() == "add":
-                args = msg.get("args")
-                seconds = 0
-                if len(args) == 3: #hours
-                    seconds += int(args[2])*3600
-                    
-                if len(args) == 2:#minutes
-                    seconds += int(args[1])*60
-                    
-                seconds += int(args[0]) #seconds
-                self.addtimer(seconds, dest)
-                
-            elif msg.getValue() == "timers":
-                timers = []
-                for timer in self._timers:
-                    timers.append({"Created":timer.getTimeCreated(),
-                                   "Ends":timer.getTimeToEnd()})
-                routing.sendMsg(makeMsg(timers,self.ID,dest))
-                
-            else:
-                routing.sendMsg(makeErrorMsg("Invalid action", self.ID,dest))
-            
-        except Exception as e:
-            try:routing.sendMsg(makeErrorMsg(e,self.ID,msg.getSource()))
-            except:pass
+        return self._commands
     
-    def addtimer(self, seconds, dest):
+    def get_events(self):
+        return self._events
+
+    def getport(self):
+        return self._port
+    
+    def getstatus(self):
+        return "There are "+str(len(self._timers))+" timers running."
+
+    def gettimers(self):
+        timers = []
+        for timer in self._timers:
+            timers.append({"Created":timer.getTimeCreated(),
+                           "Ends":timer.getTimeToEnd()})
+        return timers
+            
+    def add(self, *args):
+        seconds = 0
+        if len(args) == 3: #hours
+            seconds += int(args[2])*3600
+                    
+        if len(args) >= 2:#minutes
+            seconds += int(args[1])*60
+            
+        if len(args) >= 1: #seconds  
+            seconds += int(args[0])
+            
+        if len(args) > 0:
+            self.addtimer(seconds)
+        else:
+            raise Exception("Add needs 1-3 arguments.")
+        
+    def arand(self, args):
+        if len(args) == 1: #set min=args
+            min = int(args[0])
+            if min < 1:
+                raise Exception("Value given for arand must be larger than 1.")
+            else:    
+                self.addtimer(random.randint(min, self._maxrand))
+        elif len(args) == 2: #set both max and min
+            min = int(args[0])
+            max = int(args[1])
+            if min < LOWEST_RAND or max < LOWEST_RAND:
+                raise Exception("Value given for arand must be larger than "+str(LOWEST_RAND))
+                        
+            #if max and min are switched, then swap them before testing.
+            elif max > min: max, min = min, max
+                    
+            self.addtimer(random.randint(min, max))
+        else: #use the variables from the config file
+            self.addtimer(random.randint(self._minrand, self._maxrand))
+            
+    def addtimer(self, seconds):
         """ Adds a timer, and starts the SingalPlugin if needed."""
         try:
             t = MyTimer(seconds,self.sendSignal)
@@ -147,25 +140,24 @@ class TimerPlug(SignalPlug):
             self._timers.append(t)
             self.activate() #starts the run thread if its not already running
             
-            routing.sendMsg(makeMsg("Started timer for "+str(seconds)+" seconds!",self.ID,dest))
+            return "Started timer for "+str(seconds)+" seconds!"
         except:
-            routing.sendMsg(makeErrorMsg("Couldn't add timer!",self.ID,dest))
+            raise Exception("Couldn't add timer!")
             
-    def removetimer(self, index, dest):
+    def removetimer(self, index):
         """ Removes a timer. The _run method will notice if nothings there. """
         try:
             t = self._timers.pop(index)
             t.cancel()
-            routing.sendMsg(makeMsg("Successfully removed timer!",self.ID,dest))
+            return "Successfully removed timer!"
         except:
-            routing.sendMsg(makeErrorMsg("Couldn't removed timer!",self.ID,dest))
+            raise Exception("Couldn't removed timer!")
     
     def sendSignal(self, timer):
-        alert = makeAlertMsg("Timer went off!!",self.ID)
         for conn in self._connections:
-            try:conn.send(alert)
+            try:conn.send(self.EVENT_timer)
             except:pass
-        routing.sendMsg(alert)
+        self.EVENT_timer.trigger()
         self._timers = list(filter(lambda a: not a.isfinished(), self._timers))
             
     def killconnections(self):
@@ -179,15 +171,14 @@ class TimerPlug(SignalPlug):
         """ Cancels all running timers! """
         for timer in self._timers: timer.cancel()
         self._timers = []
-        
-             
+            
     def deactivate(self):
         """ stops all connections and the server. """
         SignalPlug.deactivate(self)
         self.killconnections()
         self.killtimers()
                  
-                
+       
     def run(self):
         """ Runs when there are timers to watch, and then sends a signal when there is need to."""
         try:

@@ -18,11 +18,10 @@ limitations under the License.
 # server with a TCP socket. Everything is non-specialized for SNTG.
 # So have some fun with daemons in your own projects.
 #
-__version__ = "0.5"
+__version__ = "0.7"
 
-
+from socket import timeout # Imported so others don't have to. 
 from socket import socket, AF_INET, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR, SHUT_RDWR
-
 
 class DaemonSocketError(Exception):
     """A Daemon Socket Error is an issue caused from issues within the 

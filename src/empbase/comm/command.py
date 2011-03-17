@@ -21,9 +21,10 @@ class Command():
                         trigger=helpscreen,
                         help="Displays a help screen for this Plug" )
     """
-    def __init__(self, name, trigger=None, help=None):
+    def __init__(self, name, trigger=None, pargs=(), help=None):
         self.name = name
         self.trigger = trigger
+        self.pargs = pargs
         self.help = help
         
     def __eq__(self, other):
@@ -39,8 +40,10 @@ class Command():
         
     def run(self, *args):
         """ Runs the function this Command represents."""
-        if self.trigger is None: return
-        else: self.trigger(*args)
+        if self.trigger is None:
+            raise Exception("No trigger given to command.") 
+        else:
+            return self.trigger(self.pargs+args)
         
     def asMap(self):
         """ Returns this command as a map of name to help string. """

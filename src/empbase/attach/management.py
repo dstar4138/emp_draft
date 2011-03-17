@@ -13,8 +13,10 @@ See the License for the specific language governing permissions and
 limitations under the License. 
 """
 
+import logging
+from empbase.registration.events import EventManager
 from empbase.attach.VariablePluginManager import VariablePluginManager
-from empbase.attach.attachments import EmpAlarm, LoopPlug, SignalPlug
+from empbase.attach.attachments import EmpAlarm, EmpPlug, LoopPlug, SignalPlug
 
 # the internal categories that the attachment manager can handle.
 LOOPS = "Loops"
@@ -29,12 +31,13 @@ ATTACH_EXT = "emp"
 
 class AttachmentManager(VariablePluginManager):
     
-    def __init__(self, dirs, conf):
-        VariablePluginManager.__init__( self, conf,
+    def __init__(self, dirs, conf, router, registry):
+        VariablePluginManager.__init__( self, conf, router, 
                                         categories_filter=ATTACH_CAT,
                                         directories_list=dirs,
                                         plugin_info_ext=ATTACH_EXT )
-        
+        # only active attachments have their events registered 
+        self.eman = EventManager(registry)
         
     def activateAttachments(self):
         """ Activates the attachments that want to be activated on
@@ -43,7 +46,14 @@ class AttachmentManager(VariablePluginManager):
         """
         for attach in self.getAllPlugins():
             if attach.plugin_object.makeactive:
-                attach.plugin_object.activate()
+                try:
+                    if isinstance(attach, EmpPlug):
+                        self.eman.loadEvents(attach.get_events())
+                    else: #EmpAlarm
+                        self.eman.addAlarm(attach)
+                    attach.plugin_object.activate()
+                except Exception as e:
+                    logging.error(e)
                 
     def getLoopPlugs(self):
         """ Get all the loop plug-ins that are loaded. This is used in the pull

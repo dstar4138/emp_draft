@@ -15,10 +15,11 @@ limitations under the License.
 import os
 import time
 import logging
-import empbase.comm.routing as routing
-from empbase.comm.messages import makeMsg, makeAlertMsg,  \
-                                      makeErrorMsg, COMMAND_MSG_TYPE
-from empbase.attach.attachments import LoopPlug
+
+from empbase.comm.command        import Command
+from empbase.registration.events import Event
+from empbase.attach.attachments  import LoopPlug
+
 
 class FileWatcher(LoopPlug):
     """ Watches a list of local files for changes. Any changes are added 
@@ -40,40 +41,23 @@ class FileWatcher(LoopPlug):
             except Exception as e:
                 logging.error("%s had an error getting the file time" % e)
                 break
-        self._commands =["help","update","status","files","add","rm"]
+        
+        self._commands =[Command("update", trigger=self.update, help="forces an update"),
+                         Command("status", trigger=self.check_status, help="checks whether the plug is activated"),
+                         Command("files", trigger=self.get_files, help="returns a list of files being watched"),
+                         Command("add", trigger=self.add_file, help="add file x o list of files being watched"),
+                         Command("rm", trigger=self.rm_file, help="remove file x from list, x being an index or the file name.")]
+        
+        # The file watcher only has one event...
+        self.EVENT_filechange = Event(self.ID, "filechange")
+        self._events = [self.EVENT_filechange]
     
-    def handle_msg(self, msg):
-        try:
-            if msg.get("message") == COMMAND_MSG_TYPE:
-                value = msg.get("command")
-                dest = msg.get("source")
-                if value in self._commands:
-                    if value == "update": 
-                        self.update(msg.get("args"))
-                    elif value == "status": 
-                        if self.check_status():
-                            routing.sendMsg(makeMsg("File Watcher is running!",self.ID,dest))
-                        else:
-                            routing.sendMsg(makeMsg("File Watcher is not running!",self.ID,dest))
-                    elif value == "files": 
-                        self.get_files(dest)
-                    elif value == "add": 
-                        self.add_file(dest,msg.get("args"))
-                    elif value == "rm": 
-                        self.rm_file(dest,msg.get("args"))
-                else: routing.sendMsg(makeErrorMsg("command '"+value+"' did not exist", self.ID, dest))
-            #else it is ignored.
-        except Exception as e:
-            logging.exception(e)
-            try:routing.sendMsg(makeErrorMsg("command did not exist", self.ID,msg.get("source")))
-            except: routing.sendMsg(makeErrorMsg("command did not exist", self.ID,None))
     
     def get_commands(self):
-        return {"update": "forces an update, if a file is given then it will update just that one.",
-                "status": "checks whether the plug-in is activated.",
-                "files": "returns a list of the files being watched.",
-                "add": "add file x to list of files being watched.",
-                "rm": "remove file x from list, x being an index or the file name."}
+        return self._commands
+    
+    def get_events(self):
+        return self._events
     
     def check_status(self):
         """ Returns whether or not this plug-in is activated or not. """
@@ -84,27 +68,27 @@ class FileWatcher(LoopPlug):
             if args[0] in self._files:
                 if self._files.get(args[0]) < os.path.getmtime(args[0]):
                         self._files[args[0]] = os.path.getmtime(args[0])
-                        routing.sendMsg(makeAlertMsg("File '"+args[0]+"' changed at "+str(self._files[args[0]])+"!", self.ID))
+                        self.EVENT_filechange.trigger("File '"+args[0]+"' changed at "+str(self._files[args[0]])+"!")
             #ignore the fact that the file doesn't exist, if this problem arises.
         else:#update all
             for file in list(self._files.keys()):
                 try: 
                     if self._files.get(file) < os.path.getmtime(file):
                         self._files[file] = os.path.getmtime(file)
-                        routing.sendMsg(makeAlertMsg("File '"+file+"' changed at "+str(self._files[file])+"!", self.ID))
+                        self.EVENT_filechange.trigger("File '"+file+"' changed at "+str(self._files[file])+"!")
                 except Exception as e: logging.exception(e)
                     
         
-    def get_files(self, dest):
+    def get_files(self):
         """ Gets the internal list of files """
-        routing.sendMsg(makeMsg(list(self._files.keys()), self.ID, dest))
+        return list(self._files.keys())
     
     def add_file(self, dest, args):
         try:
             self._files[args[0]] = int(time.time())
-            routing.sendMsg(makeMsg("success",self.ID,dest))
+            return "success"
         except:
-            routing.sendMsg(makeErrorMsg("couldn't add file.",self.ID,dest))
+            raise Exception("couldn't add file.")
 
     def rm_file(self, dest, args):
         try:
@@ -112,11 +96,10 @@ class FileWatcher(LoopPlug):
                 if key == args[0]:
                     self._files.remove(key)
                     break
-            routing.sendMsg(makeMsg("success",self.ID,dest))
-            
+                
+            return "success"
         except:
-            routing.sendMsg(makeErrorMsg("couldn't remove file.",self.ID,dest))
-
+            raise Exception("couldn't add file.")
 
     def save(self):
         """Pushes the internal variables to the config variable for saving! """

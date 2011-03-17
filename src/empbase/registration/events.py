@@ -14,6 +14,7 @@ limitations under the License.
 """
 import logging
 from threading import Thread
+from empbase.comm.messages import makeAlertMsg
 
 #This is the id of an unknown event.
 UNKNOWN = "<UNKNOWNOMG>"
@@ -47,6 +48,11 @@ class Event():
         if msg is not None: 
             self.msg = msg
         triggerEvent(self.ID, msg)
+
+    def __str__(self):
+        """ When it wants to turn itself into a string it uses the 
+        AlertMessage protocol."""
+        return str(makeAlertMsg(self.msg, self.pid, title=self.name))
 
 
 def triggerEvent(eid, msg):

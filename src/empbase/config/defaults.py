@@ -24,7 +24,7 @@ import sys, os
 CUR_PLATFORM = sys.platform
 
 # OVERRIDE DEBUG MODE?
-DEBUG_MODE = True
+DEBUG_MODE = True ##XXX: REMOVE ME!!
 
 #
 # This is included as the default configuration for the config parser.
@@ -37,11 +37,14 @@ DEBUG_MODE = True
 default_configs = {
 
 #Daemon section-
-#  Will be used to hold varibles pertaining to running the daemon
+#  Will be used to hold variables pertaining to running the daemon
 "Daemon" : 
     { 
     # the location of the pid file, can not be relative.
       "pid-file" : "",
+ 
+    # registry file.
+      "registry-file" : "",
  
     # the location of the directory to save all data to, can't be relative. 
       "base-dir" : "",
@@ -97,8 +100,10 @@ writeto_cfg_file = None
 #
 if CUR_PLATFORM.find("linux")!=-1:    #linux systems.
     base_dir = os.path.expanduser("~/.emp")
+    save_loc = base_dir + "/save"
     
     default_configs["Daemon"]["pid-file"]="/var/tmp/emp.pid"
+    default_configs["Daemon"]["registry-file"]=save_loc+"/registry.xml"
     default_configs["Daemon"]["base-dir"]=base_dir
     
     default_configs["Logging"]["log-file"]=base_dir+"/errors.log"
@@ -110,12 +115,12 @@ if CUR_PLATFORM.find("linux")!=-1:    #linux systems.
 
     default_plugin_dirs.append("/etc/emp/plugs")
     default_plugin_dirs.append(base_dir+"/plugs")
-    default_plugin_dirs.append("plugs") # look in the local src/plugins directory too
+    default_plugin_dirs.append("plugs") # look in the local src/plugs directory too
 
 
-    default_alerter_dirs.append("/etc/smtg/alarms")
+    default_alerter_dirs.append("/etc/emp/alarms")
     default_alerter_dirs.append(base_dir+"/alarms")
-    default_alerter_dirs.append("alarms") # look in the local src/alerters directory too
+    default_alerter_dirs.append("alarms") # look in the local src/alarms directory too
 
 elif CUR_PLATFORM.find("win32")!=-1:  # Windows systems.
     pass
@@ -128,7 +133,7 @@ else:  # the poor souls not using one of the above. :(
 #Set up the attachments directories!
 attachment_dirs = default_plugin_dirs + default_alerter_dirs
 #set the debug mode variable if its internally set!
-if DEBUG_MODE: default_configs["Logging"]["debug-mode"]="true"
+if DEBUG_MODE: default_configs["Logging"]["debug-mode"]="true" ##XXX: REMOVE ME
 
 ############## ALT MAIN TO TEST ######################
 #if __name__ == "__main__":

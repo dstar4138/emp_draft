@@ -16,7 +16,7 @@ limitations under the License.
 import os, sys, logging
 from configparser import ConfigParser
 from empbase.attach.attachments import EmpAlarm
-from empbase.config.defaults import default_configs, default_cfg_files, writeto_cfg_file
+from empbase.config.defaults import attachment_dirs, default_configs, default_cfg_files, writeto_cfg_file
 
 CATEGORY_MAP = {"Loops":"plug_",
                 "Signals":"plug_",
@@ -93,6 +93,16 @@ class EmpConfigParser(ConfigParser):
             try: return TinyCfgPrsr(dict(self.items(attach_name)))
             except: return TinyCfgPrsr({})
         
+
+    def getAttachmentDirs(self):
+        """ Gets the directories that attachments can be found in."""
+        #TODO: ?? allow to be changable via cfg file ??
+        return attachment_dirs
+    
+    def getRegistryFile(self):
+        """ The registry file to be read in by the Registry object. """
+        return self.get("Daemon","registry-file")
+    
     
     def defaultAttachmentVars(self, name, defaults, category):
         """Called by SmtgPluginManager and SmtgAlertManager to load the default

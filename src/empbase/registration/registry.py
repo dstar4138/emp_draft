@@ -179,13 +179,13 @@ class Registry():
     def subscriptions(self, aid): 
         """ Gets all the events that an alarm is subscribed to."""
         pass #TODO: implement subscriptions method
-    
+
     
     def register(self, cmd, module, type):
         """ Base registration method, returns the registry ID, """
         newid = self.__genNewAttachId()
         self._attachments[newid] = RegAttach( cmd, module, newid, type )
-        return newid
+        return newid   
     
     def registerInterface(self):
         """ Registers an interface temporarly with the registry. """
@@ -264,11 +264,12 @@ class Registry():
     
     def isEventLoaded(self, name):
         return False #TODO: check the registry
+    
     def __getIDFromCID(self, cid):
         """ Utility function that returns the id of a given command or id of
         an attachment.
         """
-        if cid in self._attachments:
+        if cid in self._attachments or cid == self._did:
             return cid
         
         for k,v in self._attachments.items():

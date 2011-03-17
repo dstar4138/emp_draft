@@ -32,25 +32,24 @@ import logging
 from socket import timeout
 from threading import Thread
 
-import empbase.comm.routing as routing
-import empbase.config.defaults as empconf
+
 from empbase.comm.interface import Interface
+from empbase.registration.registry import Registry
 from empbase.attach.management import AttachmentManager
 from empbase.config.logger import setup_logging
 from empbase.config.empconfigparser import EmpConfigParser
 
 from empbase.daemon.RDaemon import RDaemon
 from empbase.daemon.daemonipc import DaemonServerSocket
+from empbase.comm.routing import MessageRouter
 from empbase.comm.messages import makeErrorMsg, makeCommandMsg,  \
                                       makeMsg, strToMessage, COMMAND_MSG_TYPE,  \
                                       ERROR_MSG_TYPE 
 
-def notimplemented(dest):
-    routing.sendMsg(makeErrorMsg("Action is not implemented yet!!",None,dest))
-
-def checkEmpStatus():
+def checkEmpStatus():#XXX: Violates config vars...
     """ Checks whether the SmtgDaemon is currently running or not."""
     import os
+    import empbase.config.defaults as empconf
     return os.path.exists(empconf.default_configs["Daemon"]["pid-file"])
 
 
@@ -74,6 +73,11 @@ class EmpDaemon(RDaemon):
         # get yourself a timer!
         self.start_time=time.time() 
         self.fm_start_time = time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime(self.start_time))
+
+        # presets!
+        self.registry = None #Registry object!!
+        self.aman     = None #AttachmentManager
+        self.router   = None #message router
 
         # now set up the internal configuration via a config file.
         self.config=EmpConfigParser(configfile)
@@ -109,7 +113,7 @@ class EmpDaemon(RDaemon):
         self.start()
 
     
-    def handle_msg(self, msg):
+    def handle_msg(self, msg):#FIXME: OMG EVERYTHING IS BROKEN
         """ Handles the incoming messages passed to it from the CommReader. """
         logging.debug("daemon received: %s" % msg)
         action = strToMessage(msg)
@@ -157,7 +161,7 @@ class EmpDaemon(RDaemon):
         else: routing.sendMsg(makeErrorMsg("invalid message", None, action.getSource()))
   
   
-    def __help(self, dest, args):
+    def __help(self, dest, args):#FIXME: OMG EVERYTHING IS BROKEN
         """ Generates a dictionary for you to print out for a help screen. As arguments
         to this function, you can have:
             - blank : this will cause the daemon to print out a help screen just for 
@@ -225,9 +229,14 @@ class EmpDaemon(RDaemon):
                 daemon. 
         """
         try:
+            self.registry = Registry(self.config.getRegistryFile())
+            self.router   = MessageRouter(self.registry)
+            
             # load the plug-in manager now and search for the plug-ins.
-            self.aman = AttachmentManager(empconf.attachment_dirs, 
-                                          self.config)
+            self.aman = AttachmentManager(self.config.getAttachmentDirs(), 
+                                          self.config,
+                                          self.router,
+                                          self.registry)
             self.aman.collectPlugins()
             
             #activates the attachments based on user cfg file. 
@@ -236,10 +245,8 @@ class EmpDaemon(RDaemon):
             self.aman.activateAttachments()
     
             # starts the comm router running to send messages!!
-            routing.register("daemon",self)
-            Thread(target=routing.startRouter,
-                   kwargs={"base":self,
-                           "triggermethod":self.isRunning}).start()
+            Thread(target=self.router.startRouter,
+                   kwargs={"triggermethod":self.isRunning}).start()
             
             # start the interface thread
             Thread(target=self.__t2).start()
@@ -275,7 +282,7 @@ class EmpDaemon(RDaemon):
                 signal.plugin_object.deactivate()    
             
             #flush the router, and save all configurations.
-            routing.flush()
+            self.router.flush()
             self.config.save( self.aman.getAllPlugins() )
             logging.debug("pull-thread is dead")
 
@@ -309,7 +316,7 @@ class EmpDaemon(RDaemon):
             
                 # since there are abilities that this person can perform throw
                 # to new thread by way of the interface class
-                routing.sendMsg(makeCommandMsg("proceed",self.ID, dest=interface.ID))
+                self.router.sendMsg(makeCommandMsg("proceed",self.ID, dest=interface.ID))
                 Thread(target=interface.receiver).start()
                 logging.debug("pushed interface to new thread.")
             except timeout:pass #catches a timeout and allows for daemon status checking
