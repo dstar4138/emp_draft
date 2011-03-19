@@ -47,7 +47,7 @@ class MessageRouter():
         persist even after closing EMP."""
         
         if isinstance(ref, Interface):
-            id = self._registry.registerInterface(name)
+            id = self._registry.registerInterface(name, ref)
             # keep the ref so we can kill the connection on our side when
             # we stop emp. See self.flush() for more details.
             self._routees[id] = ref
@@ -55,17 +55,17 @@ class MessageRouter():
         ## We are keeping capability to distinguish between routees and other
         ## attachments in case we want to add a Routee of a different type.
         elif isinstance(ref, Routee):
-            id = self._registry.registerUnkown(name)
+            id = self._registry.registerUnkown(name, ref)
             self._routees[id] = ref 
 
         ## All attachments are utilized differently, they have commands to speed
         ## up message passing.
         elif isinstance(ref, EmpAlarm):
-            id = self._registry.registerAlarm(name, module)
+            id = self._registry.registerAlarm(name, module, ref)
             self._cmd_map[id] = ref.get_commands()
             
         elif isinstance(ref, EmpPlug):
-            id = self._registry.registerPlug(name, module)
+            id = self._registry.registerPlug(name, module, ref)
             self._cmd_map[id] = ref.get_commands()
             
         ## The daemon is handled specially... 

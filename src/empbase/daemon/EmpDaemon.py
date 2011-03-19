@@ -16,9 +16,9 @@ limitations under the License.
 
 __version__ = "0.7.1"
 __description__ = """
-The SMTG-Daemon is responsible for alerts, updates and other plug-in
+The EMP-Daemon is responsible for alerts, updates and other plug-in
 communications. However, any interaction should go through smtg rather
-than smtgd. This is so logging and proper error handling can be
+than empd. This is so logging and proper error handling can be
 provided as that is the user interface and not a background server. 
 Please note that the daemon controls are also provided in the smtg 
 interface for your use.
@@ -45,13 +45,6 @@ from empbase.comm.routing import MessageRouter
 from empbase.comm.messages import makeErrorMsg, makeCommandMsg,  \
                                       makeMsg, strToMessage, COMMAND_MSG_TYPE,  \
                                       ERROR_MSG_TYPE 
-
-def checkEmpStatus():#XXX: Violates config vars...
-    """ Checks whether the SmtgDaemon is currently running or not."""
-    import os
-    import empbase.config.defaults as empconf
-    return os.path.exists(empconf.default_configs["Daemon"]["pid-file"])
-
 
 
 class EmpDaemon(RDaemon):
@@ -113,7 +106,7 @@ class EmpDaemon(RDaemon):
         self.start()
 
     
-    def handle_msg(self, msg):#FIXME: OMG EVERYTHING IS BROKEN
+    def handle_msg(self, msg):#FIXME: OMG EVERYTHING IS BROKEN, use get_commands
         """ Handles the incoming messages passed to it from the CommReader. """
         logging.debug("daemon received: %s" % msg)
         action = strToMessage(msg)
@@ -284,6 +277,7 @@ class EmpDaemon(RDaemon):
             #flush the router, and save all configurations.
             self.router.flush()
             self.config.save( self.aman.getAllPlugins() )
+            self.registry.save()
             logging.debug("pull-thread is dead")
 
         except Exception as e:

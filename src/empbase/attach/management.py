@@ -37,7 +37,7 @@ class AttachmentManager(VariablePluginManager):
                                         directories_list=dirs,
                                         plugin_info_ext=ATTACH_EXT )
         # only active attachments have their events registered 
-        self.eman = EventManager(registry)
+        self.eman = EventManager(registry, self)
         
     def activateAttachments(self):
         """ Activates the attachments that want to be activated on
@@ -47,10 +47,10 @@ class AttachmentManager(VariablePluginManager):
         for attach in self.getAllPlugins():
             if attach.plugin_object.makeactive:
                 try:
-                    if isinstance(attach, EmpPlug):
-                        self.eman.loadEvents(attach.get_events())
+                    if isinstance(attach.plugin_object, EmpPlug):
+                        self.eman.loadEvents(attach.plugin_object.get_events())
                     else: #EmpAlarm
-                        self.eman.addAlarm(attach)
+                        self.eman.addAlarm(attach.plugin_object)
                     attach.plugin_object.activate()
                 except Exception as e:
                     logging.error(e)
@@ -60,7 +60,8 @@ class AttachmentManager(VariablePluginManager):
         loop thread for updating all of them. 
         """
         return sorted( self.getPluginsOfCategory(LOOPS),
-                       key=lambda x: x.plugin_object.update_importance)
+                       key=lambda x: x.plugin_object.update_importance,
+                       reverse=True)
         
     def getSignalPlugs(self):
         """ Utility function for getting all the signal plugins. """

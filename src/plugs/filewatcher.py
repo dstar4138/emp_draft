@@ -41,13 +41,11 @@ class FileWatcher(LoopPlug):
             except Exception as e:
                 logging.error("%s had an error getting the file time" % e)
                 break
-        
         self._commands =[Command("update", trigger=self.update, help="forces an update"),
                          Command("status", trigger=self.check_status, help="checks whether the plug is activated"),
                          Command("files", trigger=self.get_files, help="returns a list of files being watched"),
                          Command("add", trigger=self.add_file, help="add file x o list of files being watched"),
                          Command("rm", trigger=self.rm_file, help="remove file x from list, x being an index or the file name.")]
-        
         # The file watcher only has one event...
         self.EVENT_filechange = Event(self.ID, "filechange")
         self._events = [self.EVENT_filechange]

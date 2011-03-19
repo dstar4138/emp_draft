@@ -29,9 +29,9 @@ from yapsy.IPlugin import IPlugin
 #   The lower the number the closer to the beginning it is. You can
 #   get fancy with the importance levels, or just use one of the ones
 #   provided. 
-LOW_IMPORTANCE  = 100
+LOW_IMPORTANCE  = 0
 MID_IMPORTANCE  = 50
-HIGH_IMPORTANCE = 0
+HIGH_IMPORTANCE = 100
 
 
 class EmpAttachment(IPlugin):
@@ -40,8 +40,9 @@ class EmpAttachment(IPlugin):
     interface for your new plug-in since SMTG separates it's internals
     based on those.
     """
-    def __init__(self, conf):
-        self.config = conf
+    def __init__(self, config):
+        self.ID = ''
+        self.config = config
         IPlugin.__init__(self)
         self.makeactive = self.config.getboolean("makeactive",True) 
         
@@ -62,8 +63,8 @@ class EmpAttachment(IPlugin):
 
 
 class EmpPlug(EmpAttachment):
-    def __init__(self, conf):
-        EmpAttachment.__init__(self, conf)
+    def __init__(self, config):
+        EmpAttachment.__init__(self, config)
         
     def get_events(self):
         """ This is the list of Event objects that the Plug can cause. Each
@@ -78,11 +79,11 @@ class EmpPlug(EmpAttachment):
 class EmpAlarm(EmpAttachment):
     """This is the base method of alerting. """
     
-    def __init__(self, conf):
+    def __init__(self, config):
         """ Create the foundation of an alert with a dictionary of internal 
         variables, passed to it via the daemon/AttachmentManager.
         """
-        EmpAttachment.__init__(self, conf)
+        EmpAttachment.__init__(self, config)
     
     def alert(self, *args):
         """ Runs the alert process. This is the core of an alert. """
@@ -95,8 +96,8 @@ class LoopPlug(EmpPlug):
     a regular interval. The importance of the LoopPlugin decides when it
     gets to be pulled in the list of other LoopPlugins.
     """
-    def __init__(self, conf, importance=MID_IMPORTANCE):
-        EmpPlug.__init__(self, conf)
+    def __init__(self, config, importance=MID_IMPORTANCE):
+        EmpPlug.__init__(self, config)
         self.update_importance=self.config.getint("importance",importance)
 
     def change_importance(self, importance):
@@ -121,8 +122,8 @@ class SignalPlug(EmpPlug):
     If you NEED this method for your plug-in, at least make it benign
     until it's hand-launched by the user. 
     """
-    def __init__(self, conf, autostart=None):
-        EmpAttachment.__init__(self, conf)
+    def __init__(self, config, autostart=None):
+        EmpAttachment.__init__(self, config)
         if autostart is not None and autostart:
             self.makeactive = autostart
     

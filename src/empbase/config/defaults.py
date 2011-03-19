@@ -34,7 +34,7 @@ DEBUG_MODE = True ##XXX: REMOVE ME!!
 # it done. (As opposed to loading from a coupled default config file 
 # that is build upon first time run.)
 #
-default_configs = {
+DEFAULT_CONFIGS = {
 
 #Daemon section-
 #  Will be used to hold variables pertaining to running the daemon
@@ -86,54 +86,89 @@ default_configs = {
     }
 }
 
-default_cfg_files = []
-default_plugin_dirs = []
+###### THE FOLLOWING ARE GENERATED BASED ON OS ######
+BASE_DIR = None # base configuration directory where logs, etc are saved.
+SAVE_DIR = None # the sub directory that all attachment data is saved
+
+# the locations of all config files to read in. It must be in order
+#   - OS defaults
+#   - User defaults 
+DEFAULT_CFG_FILES    = []
+
+# Locations of attachments, then joined in variable ATTACHMENT_DIRS below
+default_plugin_dirs  = []
 default_alerter_dirs = []
 
 # this is the file that the config parser will write to when its closing.
-writeto_cfg_file = None
+SAVE_CFG_FILE = None
 
 #
 # Set up OS specific variables in the default configuration variable, we can
 # also set up some other stuff if need be. Namely call setup.py if there is 
-# anything missing?
+# anything missing? These defaults will then be overrode when we read in 
 #
 if CUR_PLATFORM.find("linux")!=-1:    #linux systems.
-    base_dir = os.path.expanduser("~/.emp")
-    save_loc = base_dir + "/save"
+    BASE_DIR = os.path.expanduser("~/.emp")
+    SAVE_DIR = BASE_DIR + "/save"
+    SAVE_CFG_FILE = BASE_DIR+"/emp.cfg"
     
-    default_configs["Daemon"]["pid-file"]="/var/tmp/emp.pid"
-    default_configs["Daemon"]["registry-file"]=save_loc+"/registry.xml"
-    default_configs["Daemon"]["base-dir"]=base_dir
+    DEFAULT_CONFIGS["Daemon"]["pid-file"]="/var/tmp/emp.pid"
+    DEFAULT_CONFIGS["Daemon"]["registry-file"]=SAVE_DIR+"/registry.xml"
+    DEFAULT_CONFIGS["Daemon"]["base-dir"]=BASE_DIR
     
-    default_configs["Logging"]["log-file"]=base_dir+"/errors.log"
-    writeto_cfg_file = base_dir+"/emp.cfg"
+    DEFAULT_CONFIGS["Logging"]["log-file"]=BASE_DIR+"/errors.log"
     
-    default_cfg_files.append("/etc/emp/emp.cfg")
-    default_cfg_files.append(writeto_cfg_file)
+    DEFAULT_CFG_FILES.append("/etc/emp/emp.cfg")
+    DEFAULT_CFG_FILES.append(SAVE_CFG_FILE)
     # then a given file will be read in at the end in SmtgConfigParser
 
     default_plugin_dirs.append("/etc/emp/plugs")
-    default_plugin_dirs.append(base_dir+"/plugs")
-    default_plugin_dirs.append("plugs") # look in the local src/plugs directory too
-
+    default_plugin_dirs.append(BASE_DIR+"/plugs")
 
     default_alerter_dirs.append("/etc/emp/alarms")
-    default_alerter_dirs.append(base_dir+"/alarms")
-    default_alerter_dirs.append("alarms") # look in the local src/alarms directory too
+    default_alerter_dirs.append(BASE_DIR+"/alarms")
+    
 
 elif CUR_PLATFORM.find("win32")!=-1:  # Windows systems.
-    pass
-elif CUR_PLATFORM.find("darwin")!=-1: # Mac OSX
-    pass
+    #TODO: distinguish between NT and later, write!
+    BASE_DIR = "~user/.emp"
+    SAVE_DIR = BASE_DIR + "/save"
+    SAVE_CFG_FILE = BASE_DIR+"/emp.cfg"
+    
+    DEFAULT_CONFIGS["Daemon"]["pid-file"]=BASE_DIR+"/running.pid"
+    DEFAULT_CONFIGS["Daemon"]["registry-file"]=SAVE_DIR+"/registry.xml"
+    
+    DEFAULT_CONFIGS["Logging"]["log-file"]=BASE_DIR+"/errors.log"
+    
+    DEFAULT_CFG_FILES.append("emp.cfg") #FIXME: right location?
+    DEFAULT_CFG_FILES.append(SAVE_CFG_FILE)
+
+    default_plugin_dirs.append(BASE_DIR+"/plugs")
+    default_alerter_dirs.append(BASE_DIR+"/alarms")
+    
+elif CUR_PLATFORM.find("darwin")!=-1: # Mac OSX, older?
+    pass #TODO: write this!!
+
 else:  # the poor souls not using one of the above. :(
     logging.warning("Could not determine current operating system.")
 
 
+################# AFTER THOUGHT VARIABLE CHANGES!! #######################
+# Open base and save dirs for user editing.
+DEFAULT_CONFIGS["Daemon"]["base-dir"]=BASE_DIR
+DEFAULT_CONFIGS["Daemon"]["save-dir"]=SAVE_DIR
+
+# Look at local directories for attachments
+default_plugin_dirs.append("plugs") # look in the local src/plugs directory
+default_alerter_dirs.append("alarms") # look in the local src/alarms directory too
+
 #Set up the attachments directories!
-attachment_dirs = default_plugin_dirs + default_alerter_dirs
+ATTACHMENT_DIRS = default_plugin_dirs + default_alerter_dirs
 #set the debug mode variable if its internally set!
-if DEBUG_MODE: default_configs["Logging"]["debug-mode"]="true" ##XXX: REMOVE ME
+if DEBUG_MODE: DEFAULT_CONFIGS["Logging"]["debug-mode"]="true" ##XXX: REMOVE ME
+
+
+
 
 ############## ALT MAIN TO TEST ######################
 #if __name__ == "__main__":

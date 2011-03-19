@@ -12,9 +12,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and 
 limitations under the License. 
 """
+import os
 import random
 import logging
-from xml.dom.minidom import Element,Document,parse
+from xml.etree.ElementTree import ElementTree, SubElement
 
 """
 the registry xml structure is thus:
@@ -53,32 +54,13 @@ class RegAttach():
         self.id = id
         self.type = type
         
-    def toXMLNode(self):
-        me = Element(self.type)
+    def getAttrib(self):
+        """Turns the attachment into an XML node for saving into the 
+        registry file.
         """
-        cmd = Element("cmd")
-        tmp1 = Text()
-        tmp1.data = self.cmd
-        cmd.appendChild(tmp1)
-        me.appendChild(cmd)
-        
-        mod = Element( "module")    
-        tmp2 = Text()
-        tmp2.data = self.module
-        mod.appendChild(tmp2)
-        me.appendChild(mod)
-        
-        id = Element("id")
-        tmp3 = Text()
-        tmp3.data = self.id
-        id.appendChild(tmp3)
-        me.appendChild(id)
-        """
-        
-        me.setAttribute("cmd", self.cmd)
-        me.setAttribute("module", self.module)
-        me.setAttribute("id", self.id)
-        return me
+        return { "cmd": self.cmd,
+                      "module": self.module,
+                      "id": self.id}
     
     def __eq__(self, other):
         """ Compares IDs of two RegItems or of a id string. """
@@ -87,7 +69,6 @@ class RegAttach():
         elif type(other) is RegAttach:
             return other.id == self.id
         else: return False
-    
     
     
 
@@ -103,60 +84,73 @@ class Registry():
         attachments and events will all keep their ids and command names.
         """
         self._file = filepath
-        self._did = self.__genNewAttachId()
         self._attachments = {}
         self._events = {}
+        self._did = self.__genNewAttachId()
         self.load()
+        logging.debug("loaded... theres %d attachments"%int(len(self._attachments)))
         
     def load(self): 
         """ Loads the registry list into this Registry object for use in the 
         routing protocol.
         """
-        this = parse(self._file)
-        attachments = this.getElementsByTagName("attachments")
-        for node in attachments.childNodes:
-            if node.nodeName in [ALARM, PLUG]:
-                cmd = node.getAttribute("cmd")
-                mod = node.getAttribute("mod")
-                id = node.getAttribute("id")
-                self._attachments(RegAttach(cmd, mod, id, node.nodeName))
+        try:
+            this = ElementTree()
+            this.parse(self._file)
+            attachments = this.find("attachments")
+            for node in attachments.childNodes:
+                if node.nodeName in [ALARM, PLUG]:
+                    cmd = node.attrib["cmd"]
+                    mod = node.attrib["mod"]
+                    id  = node.attrib["id"]
+                    self._attachments[id] = RegAttach(cmd, mod, id, node.nodeName)
+                
+            daemon = this.find("daemon")
+            if daemon.hasAttributes():
+                self._did = node.attrib["id"]
+                self.checkDaemonID()
             
-        daemon = this.getElementsByTagName("daemon")
-        if daemon.hasAttributes():
-            self._did = node.getAttribute("id")
-            self.checkDaemonID()
-        
-        events = this.getElementsByTagName("events")
-        #TODO: parse and load events into registry.
+            events = this.find("events")
+            #TODO: parse and load events into registry.
+        except IOError:pass# no such file? who cares...
+        except Exception as e: logging.error(e)
          
     def save(self): 
         """ Saves this Registry to the registry file in the base directory. """
         try:
-            this = Document()
-            attachments = this.createElement("attachments")
-            for v in self._attachments.values():
-                if v.type is PLUG or v.type is ALARM:
-                    attachments.appendChild(v.toXMLNode())
-            this.appendChild(attachments)
-                
-            daemon = this.createElement("daemon")
-            daemon.setAttribute("id", self._did)
-            this.appendChild(daemon)
             
-            events = this.createElement("events")
-            for v in self._events.values():
-                events.appendChild(v.toXMLNode())
-            this.appendChild(events)
-            #TODO: verify this is how events will be saved.
+            #SubElement(this, "daemon", attrib={"id":self._did})
+            #events = this.SubElement(this, "events") #TODO: verify this is how events will be saved.
             
-            with open(self._file, "w") as savefile:
-                savefile.write(this.toxml())
-            return True
+            for attach in self._attachments.values():
+                SubElement("attachments", attach.type, attrib=attach.getAttrib())
+            
+            
+            
+            
+            logging.debug("Saving registry...")
+            if self.__try_setup_path(self._file):
+                with open(self._file, "w") as savefile: 
+                    this.write(savefile)
+                logging.debug("Registry Saved!")
+                return True
+            else: return False
         except Exception as e:
             logging.exception(e)
             return False
  
-    
+    def __try_setup_path(self,path):
+        if os.path.exists(path):
+            return os.access(path, os.W_OK)
+        else:
+            try:
+                dirs, _ = os.path.split(path)
+                if not os.path.exists(dirs):
+                    os.makedirs(os.path.abspath(dirs))
+            except: 
+                return False
+            return True
+        
     def allowInterfaces(self, pid, allow=True):
         """ Toggle whether the plug id allows interfaces to listen to it. """ 
         pass #LATER: implement interface listen toggle
@@ -181,27 +175,31 @@ class Registry():
         pass #TODO: implement subscriptions method
 
     
-    def register(self, cmd, module, type):
+    def register(self, cmd, module, ref, type):
         """ Base registration method, returns the registry ID, """
         newid = self.__genNewAttachId()
         self._attachments[newid] = RegAttach( cmd, module, newid, type )
+        ref.ID = newid
         return newid   
     
-    def registerInterface(self):
+    def registerInterface(self, ref):
         """ Registers an interface temporarly with the registry. """
-        return self.register(None, None, INTERFACE)
+        logging.debug("--Registered an Interface")
+        return self.register(None, None, ref, INTERFACE)
         
-    def registerPlug(self, cmd, module):
+    def registerPlug(self, cmd, module, ref):
         """ Registers a Plug with the Registry. This will persist even when
         the daemon shuts down.
         """
-        return self.register(cmd, module, PLUG)
+        logging.debug("--Registered a Plug")
+        return self.register(cmd, module, ref, PLUG)
 
-    def registerAlarm(self, cmd, module):
+    def registerAlarm(self, cmd, module, ref):
         """ Registers an Alarm with the Registry. This will persist even when
         the daemon shuts down.
         """
-        return self.register(cmd, module, ALARM)
+        logging.debug("--Registered an Alarm")
+        return self.register(cmd, module, ref, ALARM)
 
     def deregister(self, cid):
         """ Deregisters a Plug/Alarm/Interface given an id or cmd. """

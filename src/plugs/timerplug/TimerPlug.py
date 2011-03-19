@@ -65,7 +65,7 @@ class TimerPlug(SignalPlug):
                 Command("port",     trigger=self.getport, help="Get the port to connect to on the current host that the alert msg will signal down."),
                 Command("add",      trigger=self.add, help="Add with three variables, first is seconds, second is minutes, third is hours.")]
         
-        self.EVENT_timer = Event(self.ID, "Timer went off!")
+        self.EVENT_timer = Event(self.ID, "timer", "Timer went off!")
         self._events = [self.EVENT_timer]
         
 

@@ -14,6 +14,7 @@ limitations under the License.
 """
 import logging
 from threading import Thread
+from xml.etree.ElementTree import Element
 from empbase.comm.messages import makeAlertMsg
 
 #This is the id of an unknown event.
@@ -49,6 +50,14 @@ class Event():
             self.msg = msg
         triggerEvent(self.ID, msg)
 
+    def toXMLNode(self):
+        me = Element("event")
+        me.attrib = {"pid": self.pid,
+                     "id": self.ID,
+                     "name": self.name}
+        #TODO: subscriptions!!
+        return me
+
     def __str__(self):
         """ When it wants to turn itself into a string it uses the 
         AlertMessage protocol."""
@@ -71,7 +80,7 @@ _theEManager_ = None
 class EventManager():
     """ """
     
-    def __init(self, registry, attachMan):
+    def __init__(self, registry, attachMan):
         #TODO: parse the event list and subscription map. 
         _theEManager_ = self
         self.registry = registry
@@ -79,7 +88,8 @@ class EventManager():
         
         self.eventmap = {}
         self.subscriptionmap = {}
-    
+        self.alarmrefs = {}
+        
     
     def loadEvents(self, eventlist):
         for event in eventlist:
@@ -103,4 +113,9 @@ class EventManager():
         for aid in self.subscriptionmap[eid]:
             Thread(target=self.attachments.getAlarmByID(aid).alert, args=[msg,]).start()
         
+    def addAlarm(self, ref):
+        if hasattr(ref, "ID"):
+            self.alarmrefs[ref.ID] = ref
+            logging.debug("Added alarm '%s' to EventManager"%ref.ID)
+        else: logging.error("ALARM WASN'T REGISTERED BEFORE LOADING IN EVENT MANAGER!!")
         

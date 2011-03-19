@@ -13,10 +13,9 @@ See the License for the specific language governing permissions and
 limitations under the License. 
 """
 import sys
-from empbase.comm.routee import Routee
 from empbase.daemon.daemon import Daemon
 
-class RDaemon(Daemon, Routee):
+class RDaemon(Daemon):
     """ Created to just provide portability of the current Daemon 
     implementation. I didn't want people to have to remove or change the
     daemon code to create their own projects without internal CommRouters.
@@ -26,3 +25,6 @@ class RDaemon(Daemon, Routee):
                  dargs="", daemonizerArg="-d", daemonizingCommand=None):
         """ Create a RDaemon, which is a daemon, that is also a Routee. """
         Daemon.__init__(self, pidfile, pchannel, dprog, dargs, daemonizerArg, daemonizingCommand)
+        
+    # Required to overwrite!        
+    def get_commands(self): pass

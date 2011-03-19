@@ -16,7 +16,7 @@ limitations under the License.
 import os, sys, logging
 from configparser import ConfigParser
 from empbase.attach.attachments import EmpAlarm
-from empbase.config.defaults import attachment_dirs, default_configs, default_cfg_files, writeto_cfg_file
+from empbase.config.defaults import ATTACHMENT_DIRS, DEFAULT_CONFIGS, DEFAULT_CFG_FILES, SAVE_CFG_FILE
 
 CATEGORY_MAP = {"Loops":"plug_",
                 "Signals":"plug_",
@@ -31,7 +31,7 @@ class EmpConfigParser(ConfigParser):
 
     def __init__(self, configfile=None):
         """ Check the config file and include the defaults. """
-        self.CONFIG_FILES = default_cfg_files
+        self.CONFIG_FILES = DEFAULT_CFG_FILES
 
         if configfile is not None:
             if not os.path.exists(configfile):
@@ -45,10 +45,10 @@ class EmpConfigParser(ConfigParser):
         if sys.version_info[0]==3 and sys.version_info[1]<2:            
             # i know thats bad form, but this is what happens when
             # you dont think ahead 
-            self._sections=default_configs
+            self._sections=DEFAULT_CONFIGS
         else:
             #this is in python3.2+ only
-            self.read_dict(default_configs) 
+            self.read_dict(DEFAULT_CONFIGS) 
 
     def validateInternals(self):
         """ Check all the values you are overwriting from the config 
@@ -72,8 +72,10 @@ class EmpConfigParser(ConfigParser):
         else:
             try:
                 dirs, _ = os.path.split(path)
-                os.makedirs(os.path.abspath(dirs))
-            except: return False
+                if not os.path.exists(dirs):
+                    os.makedirs(os.path.abspath(dirs))
+            except: 
+                return False
             return True
             
         
@@ -97,7 +99,7 @@ class EmpConfigParser(ConfigParser):
     def getAttachmentDirs(self):
         """ Gets the directories that attachments can be found in."""
         #TODO: ?? allow to be changable via cfg file ??
-        return attachment_dirs
+        return ATTACHMENT_DIRS
     
     def getRegistryFile(self):
         """ The registry file to be read in by the Registry object. """
@@ -119,7 +121,7 @@ class EmpConfigParser(ConfigParser):
     def save(self, attachments):
         #XXX: rewrite to conserve comments in the config file if there are any.
         """ Save the configurations to the local user's configuration. """
-        if writeto_cfg_file is not None:
+        if SAVE_CFG_FILE is not None:
             # update the plug-in variables before saving.
             for attach in attachments:
                 try:
@@ -136,9 +138,12 @@ class EmpConfigParser(ConfigParser):
                     logging.exception(e)
             
             # make sure it exists and can be written to.
-            if self.__try_setup_path(writeto_cfg_file):
-                self.write(open(writeto_cfg_file, mode="w"))
-            
+            logging.debug("Trying to save cfg to: %s"%SAVE_CFG_FILE)
+            if self.__try_setup_path(SAVE_CFG_FILE):
+                self.write(open(SAVE_CFG_FILE, mode="w"))
+                logging.debug("Saved to cfg file!")
+            else:
+                logging.error("Couldn't write to cfg file, it cant be created.")
 
 BOOL_CHOICES = {"0":False,"1":True,"no":False,"yes":True,"true":True,
                 "false":False,"on":True,"off":False, "":False}
@@ -159,34 +164,34 @@ class TinyCfgPrsr():
     def __getitem__(self, i):
         return self.get(i,None)
     
-    def get(self, option, default):
-        if option in self._value:
-            return self._value[option]
+    def get(self, key, default):
+        if key in self._value:
+            return self._value[key]
         else: return default
     
-    def getint(self, option, default):
-        if option in self._value:
-            return int(self._value[option])
+    def getint(self, key, default):
+        if key in self._value:
+            return int(self._value[key])
         else: return default
 
-    def getfloat(self, option,default):
-        if option in self._value:
-            return float(self._value[option])
+    def getfloat(self, key, default):
+        if key in self._value:
+            return float(self._value[key])
         else: return default
 
-    def getlist(self, option, default):
-        if option in self._value and self._value[option] != '':
-            return self._value[option].split(',')
+    def getlist(self, key, default):
+        if key in self._value and self._value[key] != '':
+            return self._value[key].split(',')
         else: return default
     
-    def getboolean(self, option, default):
-        if option in self._value:
-            res=self._value[option].lower()
+    def getboolean(self, key, default):
+        if key in self._value:
+            res=self._value[key].lower()
             if res in BOOL_CHOICES:
                 return BOOL_CHOICES[res]
             else: return False
         else: return default
     
-    def set(self, option, value):
-        self._value[option] = value
+    def set(self, key, value):
+        self._value[key] = value
     

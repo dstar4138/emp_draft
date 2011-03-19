@@ -120,7 +120,8 @@ class DefaultPluginManager(PluginManager):
                 for category_name in self.categories_interfaces:
                     try:
                         is_correct_subclass = issubclass(element, self.categories_interfaces[category_name])
-                    except: continue
+                    except: 
+                        continue
                     
                     if is_correct_subclass:
                         if element is not self.categories_interfaces[category_name]:

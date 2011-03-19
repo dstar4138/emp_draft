@@ -13,16 +13,16 @@ See the License for the specific language governing permissions and
 limitations under the License. 
 """
 import smtplib
-from empbase.attach.attachments import Alarm
+from empbase.attach.attachments import EmpAlarm
 
-class EmailAlerter(Alarm):
+class EmailAlerter(EmpAlarm):
     """ This alerter uses an SMTP server to send you an email when you get
     alerted.
     """
     
     def __init__(self, conf):
         """Sets up the alerter."""
-        Alarm.__init__(self, conf)
+        EmpAlarm.__init__(self, conf)
         
     def handle_msg(self, msg):
         """ """
@@ -37,4 +37,4 @@ class EmailAlerter(Alarm):
     
     
     def save(self):
-        Alarm.save(self)
+        EmpAlarm.save(self)

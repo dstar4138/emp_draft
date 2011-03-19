@@ -31,7 +31,7 @@ looking cool while monitoring the hell out of your plug-ins.
 '''
 import sys
 import argparse
-from empbase.daemon.EmpDaemon import checkEmpStatus, EmpDaemon
+from empbase.daemon.EmpDaemon import EmpDaemon
 from empbase.comm.messages import makeCommandMsg,strToMessage, ERROR_MSG_TYPE
 from empbase.daemon.daemonipc import DaemonClientSocket
 #import curses
@@ -105,7 +105,6 @@ def main():
     else:
         try:
             # we will be communicating with the daemon
-            if not checkEmpStatus(): print("Error: Daemon not running!");return
             daemon = DaemonClientSocket(port=EmpDaemon().getComPort())
             daemon.connect()
             msg = strToMessage(daemon.recv())
@@ -191,7 +190,7 @@ def main():
                             print("Command sent.")
             
         except:
-            print("Error: Couldn't connect to the daemon.")
+            print("Error: Couldn't connect to the daemon. Is it running?")
                 
 
 if __name__ == "__main__": main()

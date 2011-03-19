@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.0
+#!/usr/bin/env python3.2
 
 __copyright__ = """
 Copyright (c) 2010-2011 Alexander Dean (dstar@csh.rit.edu)
@@ -98,7 +98,7 @@ def main():
                     socket = DaemonClientSocket(port=p)
                     socket.connect()
                     msg = strToMessage(socket.recv())
-                    logging.debug("smtgd got back: %s"%msg)
+                    logging.debug("empd got back: %s"%msg)
                     if msg.getValue() == "proceed":# it connected
                         myId= msg.getDestination()
                         socket.send(makeCommandMsg("status", myId))
