@@ -1,14 +1,13 @@
-EMP Attachment API
-====================
+# EMP Attachment API #
 
 There are two main types of Attachments that EMP recognizes; Plugs (things you
 monitor) and Alarms (things that alert). Depending on what you would like to 
 build there are multiple avenues to work in.
 
+-------------------------------------------------------------------------------
 
+## Alarm Attachments ##
 
-Alarm Attachments
-=================
 
 There is only one kind of Alarm which makes it easy for creating one of your 
 own. All your class has to do is implement EmpAlarm and follow the EMP API.
@@ -31,50 +30,49 @@ Heres an example of the most basic EMP style Alarm
 And that is it! Now all you have to do is fill in the blanks. But heres an 
 explaination of each function and why it needs to be there:
 
-* __init__ : this is your initialization function, if you are familiar with 
-         python then this should be no supprise to you. Notice you have a 
-         single parameter. This is all the variables you want to have EMP save 
-         for you in its configuration file. See the Using your Configurations 
-         section below for more information.
+* \_\_init\_\_ : this is your initialization function, if you are familiar with 
+python then this should be no supprise to you. Notice you have a single 
+parameter. This is all the variables you want to have EMP save for you in 
+its configuration file. See the Using your Configurations section below for 
+more information.
              
 * save : This is whats called when EMP is shutting down, so if you have 
-         variables that you want to save in the config file for next time,
-         put them in conf. Also dont forget to call EmpAlarm.save() first.
+variables that you want to save in the config file for next time, put them in 
+conf. Also dont forget to call EmpAlarm.save() first.
 
 * get_commands : This returns a list of Command objects so that the message
-         router can quickly trigger them. Please see the Command Object section
-         for more information on how to make them.
+router can quickly trigger them. Please see the Command Object section for more 
+information on how to make them.
 
 * alert : This is what gets called when the Alarm gets triggered. So this is 
-         the main functionality that you will need to write. If this function 
-         throws an error the exception is automatically caught and saved to the
-         EMP error log. So if you arn't getting the result you expected, look 
-         there.
+the main functionality that you will need to write. If this function throws an 
+error the exception is automatically caught and saved to the EMP error log. So 
+if you arn't getting the result you expected, look there.
 
 
-Plug Attachments
-================
+-------------------------------------------------------------------------------
+
+
+## Plug Attachments ##
 
 Plug-ins are a little bit more complicated because you have a choice between two
 types of EmpPlug objects. There are LoopPlugs and SignalPlugs, and there is a 
 huge difference between the two. But first a small overview:
 
 * LoopPlugs :  The most used type and the easiest to use. EMP has what's called
-               a Pull-Loop, where it triggers all LoopPlugs to update on an 
-               interval set by the user. 
+a Pull-Loop, where it triggers all LoopPlugs to update on an interval set by 
+the user. 
                
 * SignalPlugs : These are used for instantaneous updates. These can be used for
-                security or "to-the-second" alert precisions. These could be
-                used for chat relays, program crashes, security monitoring, and
-                more.
+security or "to-the-second" alert precisions. These could be used for chat 
+relays, program crashes, security monitoring, and more.
                 
 Now for a more in depth look at them. They both inharent from EmpPlug which 
 extends EmpAttachment. But thats not really not that important to how you write 
 your own.
 
 
-LoopPlugs
-----------
+### LoopPlugs ####
 
 As stated above, the LoopPlug is the most used type for creating plug-ins. It is
 simple to build:
@@ -100,19 +98,17 @@ simple to build:
 The only thing that differs from an EmpAlarm is the last two functions.
 
 * get_events : Returns a list of Event objects so the EventManager can trigger
-               all of the Alarms that have subscribed to them. See below for 
-               more information about how to use Event objects.
+all of the Alarms that have subscribed to them. See below for more information 
+about how to use Event objects.
 
 * update : This is what gets run when the Pull-Loop calls the plugin. It never 
-            passes in any parameters, but the *args param is there if you wanted
-            to provide capability for forcing an update with params. etc.
+passes in any parameters, but the *args param is there if you wanted to provide
+capability for forcing an update with params. etc.
             
 Thats fairly simple right?
 
-
                 
-SignalPlugs
-------------
+### SignalPlugs ###
 
 SignalPlugs are exactly the same as LoopPlugs except that instead of an update 
 function they have a run function. 
@@ -141,15 +137,17 @@ will not get re-run unless its de-activated and then activated again, or the
 Daemon is restart. So code carefully and catch those exceptions!
 
 
-Helpful Hints!
-===============
+-------------------------------------------------------------------------------
+
+# Helpful Hints! #
+
 
 This section has a few hints as to how to get the most out of the EMP Attachment
 API! Use it!!
 
 
-What is an EMP file?
----------------------
+#### What is an EMP file? ####
+
 
 An EMP file is how the EMP Daemon knows about an Attachment. When it finds an 
 EMP file it will parse it and load the Attachment it discribes. If you forget
@@ -157,29 +155,27 @@ to write an EMP file then it will not be seen and loaded into EMP. If you want
 help writing one, check out EmpFileFormat.md in this directory.
 
 
-Using Your Configurations!
---------------------------
+#### Using Your Configurations! ####
 
 When your Attachment is instantiated it is given a configuration object that is
 saved internally. You can access it via: self.config
 
 The Config object has the following methods:
 
-* keys() - Returns the list of variable names.
-* get(key, default) - Returns the a keys value, if it doesn't exit, it returns
-                      the defualt.
-* getint(key,default) - casts the variable into an integer
-* getfloat(key,default) - casts the variable into a float
-* getlist(key,default) - casts the variable into a python list
-* getboolean(key,default) - casts the variable into a boolean
-* set(key, value) - set the key equal to the value
+* `keys()` - Returns the list of variable names.
+* `get(key, default)` - Returns the a keys value, if it doesn't exit, it returns
+the default.
+* `getint(key,default)` - casts the variable into an integer
+* `getfloat(key,default)` - casts the variable into a float
+* `getlist(key,default)` - casts the variable into a python list
+* `getboolean(key,default)` - casts the variable into a boolean
+* `set(key, value)` - set the key equal to the value
 
 You can also utilize it like a list but it will always either return a string
 (since thats how its stored) or None. (eg. self.config['name'])
 
 
-Using Command Objects
----------------------
+#### Using Command Objects ####
 
 Command objects are exceedingly simple to use, they take four parameters, three
 of which are optional. Here is an example:
@@ -251,8 +247,7 @@ a message back to the thing that triggered it. If there is an Exception of any
 form is thrown, it is caught and sent back as an ErrorMsg.
 
 
-Using Event Objects
--------------------
+#### Using Event Objects ####
 
 Events is the whole purpose of EMP, it is why it exists. Each Plug has a list of
 events it can trigger. This means there can be different types of events that 
@@ -295,8 +290,7 @@ important because its how the event gets registered to the Plug-in.
 *NOTE:* The second parameter must be constant, its the event's name and it 
 shouldnt change because thats how its tied to subscribers.
                               
-Attachment Cache Space?
------------------------
+#### Attachment Cache Space? ####
 
 One of the major TODOs that I have planned is to provide the ability to save 
 more than just simple configuration variables for Attachments. This is what I 
