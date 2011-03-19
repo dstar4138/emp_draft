@@ -111,7 +111,7 @@ Examples:
 
 * Here is an example to just grab the daemon stats real quick after the
 connecting process is complete:
-     {"message":"cmd", "source":"0934287342", "name":"status"}
+      {"message":"cmd", "source":"0934287342", "name":"status"}
         
 * Heres a more complicated one to update your facebook status through an
 imaginary attachment:
