@@ -25,9 +25,6 @@ from empbase.attach.attachments import EmpAlarm, EmpPlug
 from empbase.comm.messages import strToMessage, makeMsg, makeErrorMsg,  \
                                   ALERT_MSG_TYPE, COMMAND_MSG_TYPE, Message
                                   
-## Routing protocol:
-##   The following are the functions that should be used for
-##  sending messages within the system.
 class MessageRouter():
     """ Routing is now an object, this is so if we needed two instances of the
     Router with different registry information we can. Honestly, I can't think
@@ -100,7 +97,7 @@ class MessageRouter():
     
     def flush(self):
         """ Make sure all messages get where they are going before shutdown."""
-        #FIXME: Push all messages were they need to go. Right now just purging.
+        # LATER: Push all messages were they need to go. Right now just purging.
         try:
             while not self._msg_queue.empty(): 
                 self._msg_queue.get()
@@ -119,7 +116,7 @@ class MessageRouter():
         """ Runs as a separate thread for taking care of commands."""
         try:
             if cmd == None: return
-            value = cmd.run(*args)
+            value = cmd.run(args)
             self.sendMsg(makeMsg(value,source,dest))
         except Exception as e:
             self.sendMsg(makeErrorMsg(str(e), source, dest))    

@@ -38,7 +38,7 @@ more information.
              
 * `save` : This is whats called when EMP is shutting down, so if you have 
 variables that you want to save in the config file for next time, put them in 
-conf. Also dont forget to call EmpAlarm.save() first.
+conf. Also dont forget to call `EmpAlarm.save()` first.
 
 * `get_commands` : This returns a list of Command objects so that the message
 router can quickly trigger them. Please see the Command Object section for more 
@@ -111,7 +111,7 @@ Thats fairly simple right?
 ### SignalPlugs ###
 
 SignalPlugs are exactly the same as LoopPlugs except that instead of an update 
-function they have a run function. 
+function they have a `run` function. 
 
         from empbase.attach.attachments import SignalPlug    
         class MyPlugin(SignalPlug):
@@ -224,8 +224,8 @@ help menu.
 For completeness sake, here is an example of how to use them in an Attachment:
 
             ...
-            def __init__(self, conf):
-                LoopPlug.__init__(self, conf)
+            def __init__(self, config):
+                LoopPlug.__init__(self, config)
                 ...
                 self.mycommands = [
                         Command("status",
@@ -259,7 +259,7 @@ little pop up on your screen if you get one to your personal account.
 Here is a simple example of setting up an event.
 
                 ...
-                def __init__(self, conf):
+                def __init__(self, config):
                     ...
                     self.eventx = Event(self.ID, "Event X")
                     self.myevents = [ self.eventx ]

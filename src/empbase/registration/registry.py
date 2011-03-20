@@ -13,64 +13,43 @@ See the License for the specific language governing permissions and
 limitations under the License. 
 """
 import os
+import time
 import random
 import logging
-from xml.etree.ElementTree import ElementTree, SubElement
+import xml.etree.ElementTree as ET
+from empbase.registration.regobj import RegAttach, RegEvent, \
+                                        PLUG, ALARM, INTERFACE
 
 """
-the registry xml structure is thus:
-<daemon id=''/>
-<attachments>
-    <plug cmd='' id='' module='' />
-    <alarm cmd='' id='' module='' />
-    ...
-</attachments>
-<events>
-    <event pid='' eid='' name=''>
-        <subscribers>
-            <id>...</id>
-            <id>...</id>
-            <id>...</id>
-        </subscribers>
-    </event>
-    ...
-</events>
+the registry xml structure is like this, it may change
+when we want to house more cache related items for the attachments.
+Or if the daemon needs to house things in the cache, but for now it
+is fairly simple: 
+
+<registry>
+    <daemon id=''/>
+    <attachments>
+        <plug cmd='' id='' module='' />
+        <alarm cmd='' id='' module='' />
+        ...
+    </attachments>
+    <events>
+        <event pid='' eid='' name=''>
+            <subscribers>
+                <id>...</id>
+                <id>...</id>
+                <id>...</id>
+            </subscribers>
+        </event>
+        ...
+    </events>
+</registry>
 """
 
-# RegItem Types
-PLUG = "plug"
-ALARM = "alarm"
-INTERFACE = "interface"
-DAEMON = "daemon"
+# Size of the IDs generated for Attachments, and Events.
+AID_SIZE = 5
+EID_SIZE = 10
 
-
-class RegAttach():
-    """ This is the object kept in the registry list and can easily be pushed 
-    into an XML file.
-    """
-    def __init__(self, cmd, module, id, type=PLUG):
-        self.cmd = cmd
-        self.module = module
-        self.id = id
-        self.type = type
-        
-    def getAttrib(self):
-        """Turns the attachment into an XML node for saving into the 
-        registry file.
-        """
-        return { "cmd": self.cmd,
-                      "module": self.module,
-                      "id": self.id}
-    
-    def __eq__(self, other):
-        """ Compares IDs of two RegItems or of a id string. """
-        if type(other) is str:
-            return other == self.id
-        elif type(other) is RegAttach:
-            return other.id == self.id
-        else: return False
-    
-    
 
 class Registry():
     """ This is the list of destinations for messages. Can be queried against 
@@ -85,7 +64,7 @@ class Registry():
         """
         self._file = filepath
         self._attachments = {}
-        self._events = {}
+        self._events      = {}
         self._did = self.__genNewAttachId()
         self.load()
         logging.debug("loaded... theres %d attachments"%int(len(self._attachments)))
@@ -95,43 +74,66 @@ class Registry():
         routing protocol.
         """
         try:
-            this = ElementTree()
-            this.parse(self._file)
-            attachments = this.find("attachments")
-            for node in attachments.childNodes:
-                if node.nodeName in [ALARM, PLUG]:
+            tree = ET.parse(self._file)
+            root = tree.getroot()
+
+            attachments = root.find("attachments")
+            for node in attachments.getchildren():
+                if node.tag in [ALARM, PLUG]:
                     cmd = node.attrib["cmd"]
-                    mod = node.attrib["mod"]
+                    mod = node.attrib["module"]
                     id  = node.attrib["id"]
-                    self._attachments[id] = RegAttach(cmd, mod, id, node.nodeName)
+                    self._attachments[id] = RegAttach(cmd, mod, id, node.tag)
                 
-            daemon = this.find("daemon")
-            if daemon.hasAttributes():
+            daemon = root.find("daemon")
+            if "id" in daemon.attrib:
                 self._did = node.attrib["id"]
-                self.checkDaemonID()
+                #TODO: verify validity of id
             
-            events = this.find("events")
-            #TODO: parse and load events into registry.
-        except IOError:pass# no such file? who cares...
+            events = root.find("events")
+            for node in events.getchildren():
+                event = RegEvent( node.attrib["id"],
+                                  node.attrib["pid"],
+                                  node.attrib["name"])
+                subs = node.find("subscribers")
+                for sub in subs.getchildren():
+                    event.addSubscriber(sub.attrib["id"])
+                self._events[event.ID] = event
+
+        except IOError: pass # no such file? who cares...
         except Exception as e: logging.error(e)
          
     def save(self): 
         """ Saves this Registry to the registry file in the base directory. """
         try:
+            root = ET.Element("registry", attrib={"save":str(time.time())})
             
-            #SubElement(this, "daemon", attrib={"id":self._did})
-            #events = this.SubElement(this, "events") #TODO: verify this is how events will be saved.
+            # Make sure we have the daemon's ID for next time we load!
+            ET.SubElement(root, "daemon", attrib={"id":self._did})
             
+            #Add attachments to the registry!
+            attachments = ET.Element("attachments")
             for attach in self._attachments.values():
-                SubElement("attachments", attach.type, attrib=attach.getAttrib())
+                ET.SubElement(attachments, attach.type, attrib=attach.getAttrib())
+            root.append(attachments)
             
+            #Add all the events and their subscribers!
+            events = ET.Element("events")
+            for event in self._events.values():
+                e = ET.Element("event", attrib=event.getAttrib())
+                subs = ET.Element("subscribers")
+                for sub in self.subscribedTo(event.ID):
+                    ET.SubElement(subs, "sub", attrib={"id":sub.ID})
+                e.append(subs)
+                events.append(e)
+            root.append(events)
             
-            
-            
-            logging.debug("Saving registry...")
+            # Save everything to the file that we were given on startup.
+            logging.debug("Saving registry to %s"%self._file)
             if self.__try_setup_path(self._file):
-                with open(self._file, "w") as savefile: 
-                    this.write(savefile)
+                tree = ET.ElementTree(root)
+                with open(self._file, "wb") as savefile: 
+                    tree.write(savefile)
                 logging.debug("Registry Saved!")
                 return True
             else: return False
@@ -150,56 +152,71 @@ class Registry():
             except: 
                 return False
             return True
-        
-    def allowInterfaces(self, pid, allow=True):
-        """ Toggle whether the plug id allows interfaces to listen to it. """ 
-        pass #LATER: implement interface listen toggle
+
     
     def subscribe(self, aid, eid): 
         """ Make a given Alarm id listen to a given event id. """
-        pass #TODO: implement subscribe
+        try: 
+            self._events[eid].addSubscriber(aid)
+            return True
+        except: return False    
 
     def unsubscribe(self, aid, eid): 
         """ Remove a specified event id from a given alarm id. """
-        pass #TODO: implement desubscription process
+        try: return self._events[eid].removeSubscriber(aid)
+        except: return False    
     
     def subscribedTo(self, eid): 
         """ Returns a list of all the ids that are subscribed to the given 
         event id. If the id allows interfaces, this will return all the 
         registered interface id's too.
         """
-        pass #TODO: implement subscription call to plugin
+        try: return self._events[eid].subscribers()
+        except: return None
     
     def subscriptions(self, aid): 
-        """ Gets all the events that an alarm is subscribed to."""
-        pass #TODO: implement subscriptions method
-
+        """ Gets all the event IDs that an alarm is subscribed to."""
+        subs = []
+        for event in self._events.values():
+            if event.subscribes(aid):
+                subs.append(event.ID)
+        return subs
+        
     
-    def register(self, cmd, module, ref, type):
+    def __register(self, cmd, module, ref, type):
         """ Base registration method, returns the registry ID, """
         newid = self.__genNewAttachId()
+        if cmd is not None or module is not None:
+            #check if the 
+            for id in self._attachments.keys():
+                if module == self._attachments[id].module:
+                    newid = id
+                    break
         self._attachments[newid] = RegAttach( cmd, module, newid, type )
         ref.ID = newid
         return newid   
     
     def registerInterface(self, ref):
         """ Registers an interface temporarly with the registry. """
-        logging.debug("--Registered an Interface")
-        return self.register(None, None, ref, INTERFACE)
+        id = self.__register(None, None, ref, INTERFACE)
+        logging.debug("--Registered an Interface(%s)" % id)
+        return id
         
     def registerPlug(self, cmd, module, ref):
         """ Registers a Plug with the Registry. This will persist even when
         the daemon shuts down.
         """
-        logging.debug("--Registered a Plug")
-        return self.register(cmd, module, ref, PLUG)
+        id = self.__register(cmd, module, ref, PLUG)
+        logging.debug("--Registered a Plug(%s)" % id)
+        return id 
 
     def registerAlarm(self, cmd, module, ref):
         """ Registers an Alarm with the Registry. This will persist even when
         the daemon shuts down.
         """
-        logging.debug("--Registered an Alarm")
-        return self.register(cmd, module, ref, ALARM)
+        id = self.__register(cmd, module, ref, ALARM)
+        logging.debug("--Registered an Alarm(%s)" % id)
+        return id 
 
     def deregister(self, cid):
         """ Deregisters a Plug/Alarm/Interface given an id or cmd. """
@@ -226,6 +243,7 @@ class Registry():
         except: return None 
     
     def getCmds(self):
+        """ Returns a list of all of the command names for each attachment. """
         cmds = []
         for val in self._attachments.values():
             if val.cmd is not None:
@@ -233,12 +251,17 @@ class Registry():
         return cmds
     
     def getId(self, cmd):
+        """ Quickly gets the ID for a command name. """
         return self.__getIDFromCID(cmd)
     
     def getIds(self):
+        """ Quickly gets a list of all the attachment IDs. """
         return self._attachments.keys()
     
     def setCmd(self, cid, newcmd):
+        """ Resets the attachment's target name, the first parameter can be 
+        the target's ID or its previous command string.
+        """
         id = self.__getIDFromCID(cid)
         if id is not None:
             self._attachments[id].cmd = newcmd
@@ -247,21 +270,41 @@ class Registry():
             return False
 
 
+    def loadEvents(self, eventlist):
+        """ Loads all the events into the registry, and then gives them its
+        new eid that was generated.
+        """
+        for event in eventlist:
+            event.ID = self.loadEvent(event.name, event.pid)
+
     def loadEvent(self, name, pid ):
-        #TODO: return eid and save it.
+        """ Saves an event to the registry if it doesn't exist, if it
+        does then it returns the ID."""
         if self.isEventLoaded(name):
-            pass
-            #get its eid and return
+            for id in self._events.keys():
+                if self._events[id].name == name:
+                    return id
+            #SHOULD NEVER GET HERE BECAUSE IT WAS FOUND IN THE LIST
+            raise Exception("Error generating a new ID")
         else:
             eid = self.__genNewEventId()
-            #save
+            self._events[eid] = RegEvent(eid, pid, name)
             return eid
     
     def unloadEvent(self, eid):
-        pass
+        """ Unloads an event from the registry... I dont know if we will
+        ever need this one, but I thought I should add it for completeness
+        sake.
+        """
+        try: return self._events.pop(eid, None) is not None
+        except: return False
     
     def isEventLoaded(self, name):
-        return False #TODO: check the registry
+        for event in self._events.values():
+            if event.name == name:
+                return True
+        return False
+            
     
     def __getIDFromCID(self, cid):
         """ Utility function that returns the id of a given command or id of
@@ -278,7 +321,7 @@ class Registry():
     def __genNewAttachId(self):
         """ Utility function for generating new attachment IDs. """ 
         while 1:
-            tmp = "%s" % str(random.random())[2:12]
+            tmp = "%s" % str(random.random())[2:2+AID_SIZE]
             if tmp in self._attachments:
                 continue
             else:
@@ -286,5 +329,9 @@ class Registry():
             
     def __genNewEventId(self):
         """ Utility function for generating new event IDs. """
-        pass #TODO: how are events going to differ from attachments?
-    
+        while 1:
+            tmp = "%s" % str(random.random())[2:2+EID_SIZE]
+            if tmp in self._events:
+                continue
+            else:
+                return tmp
