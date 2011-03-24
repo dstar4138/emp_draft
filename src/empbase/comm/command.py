@@ -43,7 +43,8 @@ class Command():
         if self.trigger is None:
             raise Exception("No trigger given to command.") 
         else:
-            return self.trigger(self.pargs+args)
+            tmp = self.pargs+args
+            return self.trigger(*tmp)
         
     def asMap(self):
         """ Returns this command as a map of name to help string. """
@@ -54,4 +55,29 @@ class Command():
         
     def __str__(self):
         return str(self.asMap())
+    
+    
+class CommandList():
+    """ Helpful wrapper for dealling with lists of commands."""
+    def __init__(self, value=[]):
+        if type(value) is list:
+            self._list = value
+        elif type(value) is Command:
+            self._list = [value]
+        else:
+            self._list = []
+            
+        
+    def getNames(self):
+        lst = []
+        for cmd in self._list:
+            lst.append(cmd.name)
+        return lst
+    
+    def getHelpDict(self):
+        d = {}
+        for cmd in self._list:
+            d.update(cmd.asMap())
+        return d
+    
     

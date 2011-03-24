@@ -17,7 +17,7 @@ import time
 import logging
 
 from empbase.comm.command        import Command
-from empbase.registration.events import Event
+from empbase.event.events        import Event
 from empbase.attach.attachments  import LoopPlug
 
 
@@ -47,7 +47,7 @@ class FileWatcher(LoopPlug):
                          Command("add", trigger=self.add_file, help="add file x o list of files being watched"),
                          Command("rm", trigger=self.rm_file, help="remove file x from list, x being an index or the file name.")]
         # The file watcher only has one event...
-        self.EVENT_filechange = Event(self.ID, "filechange")
+        self.EVENT_filechange = Event(self, "filechange")
         self._events = [self.EVENT_filechange]
     
     

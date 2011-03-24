@@ -18,76 +18,43 @@ import random
 import logging
 from threading import Thread
 
-from empbase.comm.routee import Routee
-from empbase.daemon.RDaemon import RDaemon
 from empbase.comm.interface import Interface
-from empbase.attach.attachments import EmpAlarm, EmpPlug
 from empbase.comm.messages import strToMessage, makeMsg, makeErrorMsg,  \
-                                  ALERT_MSG_TYPE, COMMAND_MSG_TYPE, Message
+                                  ERROR_MSG_TYPE, ALERT_MSG_TYPE,       \
+                                  COMMAND_MSG_TYPE, Message
                                   
 class MessageRouter():
     """ Routing is now an object, this is so if we needed two instances of the
     Router with different registry information we can. Honestly, I can't think
     of a valid case when we would need to though.
     """
-    def __init__(self,registry):
+    def __init__(self, registry, daemon, attachments):
         self._routees = {} #the registered receivers of messages (Routee objects)
         self._msg_queue = queue.Queue()#thread-safe message queue
-        self._cmd_map = {} # internal map of commands.
         self._registry = registry # the object all attachments and events are registered
-        self._daemon = ("",None)
+        self._attachments = attachments
+        self._daemon = (self._registry.daemonId(), daemon)
             
-    def register(self, name, module, ref):
-        """ Registers the attachment/Daemon/Routee with the router. This is 
-        used in conjunction with the Registry object that the Router has 
-        internally. Once you register a Plug, Alarm, or Daemon the ID will
-        persist even after closing EMP."""
-        
-        if isinstance(ref, Interface):
-            id = self._registry.registerInterface(name, ref)
-            # keep the ref so we can kill the connection on our side when
-            # we stop emp. See self.flush() for more details.
-            self._routees[id] = ref
-        
-        ## We are keeping capability to distinguish between routees and other
-        ## attachments in case we want to add a Routee of a different type.
-        elif isinstance(ref, Routee):
-            id = self._registry.registerUnkown(name, ref)
-            self._routees[id] = ref 
-
-        ## All attachments are utilized differently, they have commands to speed
-        ## up message passing.
-        elif isinstance(ref, EmpAlarm):
-            id = self._registry.registerAlarm(name, module, ref)
-            self._cmd_map[id] = ref.get_commands()
-            
-        elif isinstance(ref, EmpPlug):
-            id = self._registry.registerPlug(name, module, ref)
-            self._cmd_map[id] = ref.get_commands()
-            
-        ## The daemon is handled specially... 
-        #TODO:?? Should daemon get to use Command?
-        elif isinstance(ref, RDaemon):
-            id = self._registry.daemonId()
-            self._daemon = (id,ref)   
-            
-        # If we dont know what type of object it is, we can't register it.
-        else: raise Exception("Not valid object to register!")
-    
+    def addInterface(self, ref):
+        """ If this throws an error, it's because the reference isn't 
+        registered yet. 
+        """
+        self._routees[ref.ID] = ref
     
     def isRegistered(self, cid):
         """ Checks the internal registry if the id or name is registered. """
-        return self._registry.isRegistered(cid)
+        if self._registry.isRegistered(cid):
+            logging.debug("%s is registered"%cid)
+            return True
+        else:
+            logging.debug("%s is NOT registered"%cid)
+            return False
     
-    def deregister(self, id):
-        """ Removes a Routee from the registry. """
-        if not self._registry.deregister(id):
-            #it must be a Routee or something else so
-            # try the _routees variable.
-            if not self._routees.pop(id, False):
-                #then it didnt exist. sorry
-                return False
-        return True
+    def rmInterface(self, id):
+        """ Removes an interface from the registry."""
+        if self._routees.pop(id, False):
+            return self._registry.deregister(id)
+        return False
         
         
     def sendMsg(self, msg):
@@ -111,12 +78,34 @@ class MessageRouter():
                     routee.close()
                 logging.debug("deregistered: %s"%id)
                 
-    
+                
+    def __sendToDaemon(self, msg):
+        #send to daemon.
+        logging.debug("sending to daemon")
+        _,base=self._daemon
+        if base is not None:
+            if msg.getType() == COMMAND_MSG_TYPE:
+                found = False
+                for cmd in base.get_commands():
+                    logging.debug("comparing: %s ?= %s"%(cmd,msg.getValue()))
+                    if cmd == msg.getValue():
+                        found = True 
+                        Thread(target=self._cmdrun, args=msg.get("args"),
+                               kwargs={"cmd":cmd, "dest":msg.getSource(),
+                                       "source":msg.getDestination()}).start()
+                if not found:
+                    self.sendMsg(makeErrorMsg("Command does not exist.",msg.getDestination(), msg.getSource() ))
+            elif msg.getType() == ERROR_MSG_TYPE:
+                logging.error("error from %s: %s" % (msg.getSource(), msg.getValue()))
+            else: #alert or base we ignore
+                pass
+        else: logging.debug("should have sent the message to the base handler")
+        
     def _cmdrun(self, *args, cmd=None, dest=None, source=None):
         """ Runs as a separate thread for taking care of commands."""
         try:
             if cmd == None: return
-            value = cmd.run(args)
+            value = cmd.run(*args)
             self.sendMsg(makeMsg(value,source,dest))
         except Exception as e:
             self.sendMsg(makeErrorMsg(str(e), source, dest))    
@@ -137,34 +126,8 @@ class MessageRouter():
                 
                 logging.debug("destination: %s"%msg.getDestination())
                 
-                if self.isRegistered(msg.getDestination()) and msg.getType() == COMMAND_MSG_TYPE:
-                    # if its registered, it could be a routee or an attachment.
-                    cmds = self._cmd_map(msg.getDestination(),None)
-                    if cmds is not None:
-                        #we can run the command and send the result.
-                        for cmd in cmds:
-                            if cmd == msg.getValue():
-                                Thread(target=self._cmdrun, 
-                                       args=tuple(msg.get("args")),
-                                       kwargs={"cmd":cmd,
-                                               "dest":msg.getSource(),
-                                               "source":msg.getDestination()}).start()
-                    else:
-                        #ok to send since its been registered, but is a routee
-                        ref = self._routees.get(msg.getDestination(),None)
-                        if ref is not None:
-                            logging.debug("sending message: %s" % msg)
-                            Thread(target=ref.handle_msg, args=(msg,)).start()
-                        else: #send to daemon.
-                            _,base=self._daemon
-                            if base is not None:
-                                logging.debug("sending message to daemon: %s" % msg) 
-                                Thread(target=base.handle_msg,args=(msg,)).start()
-                            else: logging.debug("should have sent the message to the base handler")
-                            
                 # if the destination is not "registered" but its a known type
-                elif msg.getDestination() == "" or msg.getDestination() == None:
-                    
+                if msg.getDestination() == "" or msg.getDestination() == None:
                     # Check if the message type is an alert, if it is, then send it
                     # to all interfaces and alerters. We keep this functionality for
                     # possible use in Chat programs or quick universal relays. But
@@ -180,12 +143,35 @@ class MessageRouter():
                             
                     # if not send it to the daemon to handle.
                     else:
-                        _,base = self._daemon
-                        if base is not None:
-                            logging.debug("sending message to daemon: %s" % msg) 
-                            Thread(target=base.handle_msg,args=(msg,)).start()
-                        else: logging.debug("should have sent the message to the base handler")
+                        self.__sendToDaemon(msg)
                             
+                
+                elif self.isRegistered(msg.getDestination()):
+                    if msg.getDestination() == "daemon" or msg.getDestination() == None:
+                        self.__sendToDaemon(msg)
+                        continue
+                    # if its registered, it could be a routee or an attachment.
+                    if msg.getType() == COMMAND_MSG_TYPE:
+                        cmds = self._attachments.getCommands(msg.getDestination())
+                        if cmds is not None:#we can run the command and send the result.
+                            found = False
+                            for cmd in cmds:
+                                if cmd == msg.getValue():
+                                    found = True
+                                    Thread(target=self._cmdrun, args=msg.get("args"),
+                                           kwargs={"cmd":cmd, "dest":msg.getSource(),
+                                                   "source":msg.getDestination()}).start()
+                            if not found:
+                                self.sendMsg(makeErrorMsg("Command does not exist.",msg.getDestination(), msg.getSource() ))
+                            continue   
+                            
+                    #ok to send since its been registered, but is a routee
+                    ref = self._routees.get(msg.getDestination(),None)
+                    if ref is not None:
+                        logging.debug("sending message: %s" % msg)
+                        Thread(target=ref.handle_msg, args=(msg,)).start()
+                    else: #send to daemon.
+                        self.__sendToDaemon(msg)
                 
                 # if we don't know how to handle the message, log and discard it. oh well.
                 else:

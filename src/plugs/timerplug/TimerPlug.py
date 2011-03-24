@@ -16,8 +16,8 @@ import random
 import logging
 from plugs.timerplug.mytimer import MyTimer
 
+from empbase.event.events import Event
 from empbase.comm.command import Command
-from empbase.registration.events import Event
 from empbase.attach.attachments import SignalPlug
 from empbase.daemon.daemonipc import DaemonServerSocket, timeout
 
@@ -65,7 +65,7 @@ class TimerPlug(SignalPlug):
                 Command("port",     trigger=self.getport, help="Get the port to connect to on the current host that the alert msg will signal down."),
                 Command("add",      trigger=self.add, help="Add with three variables, first is seconds, second is minutes, third is hours.")]
         
-        self.EVENT_timer = Event(self.ID, "timer", "Timer went off!")
+        self.EVENT_timer = Event(self, "timer", "Timer went off!")
         self._events = [self.EVENT_timer]
         
 
@@ -112,25 +112,24 @@ class TimerPlug(SignalPlug):
         else:
             raise Exception("Add needs 1-3 arguments.")
         
-    def arand(self, args):
+    def arand(self, *args):
         if len(args) == 1: #set min=args
             min = int(args[0])
             if min < 1:
                 raise Exception("Value given for arand must be larger than 1.")
-            else:    
-                self.addtimer(random.randint(min, self._maxrand))
+            else:
+                return self.addtimer(random.randint(min, self._maxrand))
         elif len(args) == 2: #set both max and min
             min = int(args[0])
             max = int(args[1])
-            if min < LOWEST_RAND or max < LOWEST_RAND:
+            if min <= LOWEST_RAND or max <= LOWEST_RAND:
                 raise Exception("Value given for arand must be larger than "+str(LOWEST_RAND))
                         
             #if max and min are switched, then swap them before testing.
-            elif max > min: max, min = min, max
-                    
-            self.addtimer(random.randint(min, max))
-        else: #use the variables from the config file
-            self.addtimer(random.randint(self._minrand, self._maxrand))
+            elif max < min: max, min = min, max
+            return self.addtimer(random.randint(min, max))
+        else: #use the variables from the config file 
+            return self.addtimer(random.randint(self._minrand, self._maxrand))
             
     def addtimer(self, seconds):
         """ Adds a timer, and starts the SingalPlugin if needed."""
@@ -158,7 +157,7 @@ class TimerPlug(SignalPlug):
             try:conn.send(self.EVENT_timer)
             except:pass
         self.EVENT_timer.trigger()
-        self._timers = list(filter(lambda a: not a.isfinished(), self._timers))
+        self._timers = list(filter(lambda a: not a.isFinished(), self._timers))
             
     def killconnections(self):
         """ Close all open connections. """

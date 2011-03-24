@@ -14,7 +14,7 @@ limitations under the License.
 """
 
 import logging
-from empbase.registration.events import EventManager
+from empbase.event.eventmanager import EventManager
 from empbase.attach.VariablePluginManager import VariablePluginManager
 from empbase.attach.attachments import EmpAlarm, EmpPlug, LoopPlug, SignalPlug
 
@@ -31,12 +31,13 @@ ATTACH_EXT = "emp"
 
 class AttachmentManager(VariablePluginManager):
     
-    def __init__(self, dirs, conf, router, registry):
-        VariablePluginManager.__init__( self, conf, router, 
+    def __init__(self, conf, registry):
+        VariablePluginManager.__init__( self, conf, registry, 
                                         categories_filter=ATTACH_CAT,
-                                        directories_list=dirs,
+                                        directories_list=conf.getAttachmentDirs(),
                                         plugin_info_ext=ATTACH_EXT )
         # only active attachments have their events registered 
+        self._registry = registry
         self.eman = EventManager(registry, self)
         
     def activateAttachments(self):
@@ -48,6 +49,7 @@ class AttachmentManager(VariablePluginManager):
             if attach.plugin_object.makeactive:
                 try:
                     if isinstance(attach.plugin_object, EmpPlug):
+                        logging.debug("should have loaded events for: %s"%attach.name)
                         self.eman.loadEvents(attach.plugin_object.get_events())
                     else: #EmpAlarm
                         self.eman.addAlarm(attach.plugin_object)
@@ -72,8 +74,8 @@ class AttachmentManager(VariablePluginManager):
         return self.getPluginsOfCategory(ALARMS)
     
     def getPlugs(self):
-        return self.getPluginsOfCategory(SIGNALS).extend(
-                            self.getPluginsOfCategory(LOOPS))
+        return self.getPluginsOfCategory(SIGNALS) + \
+               self.getPluginsOfCategory(LOOPS)
         
     def getAllNames(self):
         """ Returns a dictionary of IDs to (plugname, name) for every 
@@ -111,4 +113,15 @@ class AttachmentManager(VariablePluginManager):
             if aid is alarm.plugin_object.ID:
                 return alarm.plugin_object
     
+    def getAttachment(self, cid):
+        id = self._registry.getId(cid)
+        for attach in self.getAllPlugins():
+            if attach.plugin_object.ID == id:
+                return attach.plugin_object
+        return None
+    
+    def getCommands(self, cid):
+        attach = self.getAttachment(cid)
+        if attach is None: return None
+        else: return attach.get_commands()
     

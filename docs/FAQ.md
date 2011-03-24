@@ -60,7 +60,8 @@ file bundled with it.
 You bet, but of course they would need to implement the functionality of both.
 This also means that the attachment will be utilized as both. (This means that
 there will be two references in the Daemon but only one instance of it.)
-
+**NOTE:** This functionality has currently not been added, it is in the process
+of being written, but not there yet.
 
 ### Can I have multiple instances of the same Attachment running? ###
 

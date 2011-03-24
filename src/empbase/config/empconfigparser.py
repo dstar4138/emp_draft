@@ -118,6 +118,17 @@ class EmpConfigParser(ConfigParser):
             if not self.has_option(section, option):
                 self.set(section, option, defaults[option])
     
+    
+    def getlist(self, section, option, default=[]):
+        """ Utility function for getting a list from the config file. 
+        The format for saving them is easy too. """
+        try:
+            val = self.get(section, option)
+            return str(val).split(",")
+        except: 
+            return default
+    
+    
     def save(self, attachments):
         #XXX: rewrite to conserve comments in the config file if there are any.
         """ Save the configurations to the local user's configuration. """

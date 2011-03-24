@@ -80,11 +80,55 @@ def setupParser():
     parser.add_argument("command", nargs='*', help="A command for the target and any arguments for it.")
     return parser
 
+def fancyprint(dct, buffer=2, st="-", fnt=" ", mx=80):
+    rside = max(map(len, dct.keys()))
+    rside += buffer
+    
+    def spacegen(i):
+        s=""
+        for _ in range(0,i): s+=" "
+        return s
+    
+    def carefulprint(s):
+        push=rside+len(st)+len(fnt)+1
+        count=push
+        sent = s.split(" ")
+        for i in range(0,len(sent)):
+            print(sent[i],end=' ');count+=len(sent[i])+1
+            if len(sent)>i+1 and count+len(sent[i+1]) >= mx:
+                print("\n"+spacegen(push), end='')
+                count=push
+        print()
+    
+    for k in dct:
+        print(fnt+k,end=spacegen(rside-len(k)))
+        carefulprint(st+" "+dct[k])
+    
+
 
 def interactiveMode():
     #TODO: interactive mode in glorious curses! 
     # purhaps consider urwid to make things easier: http://excess.org/urwid/
     print("Apologies, interactive mode is not yet finished. Please try again later.")
+
+def checkMsg(msg, typeCheck=None):
+    """Checks if the return is an error, if it is, it will handle it. If not 
+    then it will check it against the provided type. If is not the valid type 
+    it will print it right then and there. If it IS the valid type it will 
+    return it.
+    """
+    msg = strToMessage(msg)
+    if msg is None: 
+        print("ERROR: Is the Daemon running?")
+        sys.exit(1)
+    
+    if msg.getType() == ERROR_MSG_TYPE:
+        print("ERROR:",msg.getValue())
+        sys.exit(1)
+    elif typeCheck is None or typeCheck is type(msg.getValue()):
+        return msg.getValue()
+    else:
+        print(msg.getValue())
 
 
 #
@@ -99,13 +143,16 @@ def main():
         print("Usage:",__usage__,"\n\nType 'emp -h' for some help.")
         return
     
-    print(args)
+    #print(args)
     if args.help: help()
     elif args.i:  interactiveMode()
     else:
         try:
             # we will be communicating with the daemon
-            daemon = DaemonClientSocket(port=EmpDaemon().getComPort())
+            commport = EmpDaemon().getComPort()
+            if commport is None: print("Error: Daemon isn't running!");return
+            
+            daemon = DaemonClientSocket(port=commport)
             daemon.connect()
             msg = strToMessage(daemon.recv())
             if msg.getValue() != "proceed": print("Error: Couldn't connect to the daemon.");return
@@ -114,10 +161,10 @@ def main():
                 
             #what are we communicating    
             if args.list:
-                daemon.send(makeCommandMsg("plugins",myID))
-                plugs = strToMessage(daemon.recv()).getValue()
                 daemon.send(makeCommandMsg("alarms",myID))
-                alerters = strToMessage(daemon.recv()).getValue()
+                alerters = checkMsg(daemon.recv())
+                daemon.send(makeCommandMsg("plugs",myID))
+                plugs = checkMsg(daemon.recv())
             
                 #print the list all pretty like:
                 print("Attached targets and their temp IDs:")
@@ -136,25 +183,25 @@ def main():
         
             elif args.all: 
                 daemon.send(makeCommandMsg("help",myID, args=["all"]))
-                cmds = strToMessage(daemon.recv()).getValue()
-                
+                cmds = checkMsg(daemon.recv(), dict)
                 for target in cmds.keys():
                     print("%s"%target)
-                    print("Commands:")
-                    for cmd in cmds[target].keys():
-                        print("  %s  -%s"%(cmd,cmds[target][cmd]))
+                    if len(cmds[target].keys()) > 0:
+                        print("Commands:")
+                        fancyprint(cmds[target])
+                    else: print("No Commands available!")
                     print()
                     
             else:
                 # now we can start parsing targets and figuring out what to do with them
                 if args.tcmds:
                     daemon.send(makeCommandMsg("help",myID, args=args.target))
-                    cmds = strToMessage(daemon.recv()).getValue()
-                    for cmd in cmds.keys():
-                        print("  %s  -%s"%(cmd,cmds[cmd]))
+                    cmds = checkMsg(daemon.recv(), dict)
+                    print("%s Commands: "%args.target[0])
+                    fancyprint(cmds)
                 elif args.ask:
                     daemon.send(makeCommandMsg("help",myID, args=args.target))
-                    cmds = strToMessage(daemon.recv()).getValue()
+                    cmds = checkMsg(daemon.recv(), dict)
                     cmdfound = False
                     for cmd in cmds.keys():
                         if args.ask[0] == cmd:
@@ -168,29 +215,28 @@ def main():
                     if len(args.command) < 1:
                         print("Usage: ",__usage__)
                         daemon.send(makeCommandMsg("help", myID, args=args.target))
-                        cmds = strToMessage(daemon.recv()).getValue()
+                        cmds = checkMsg(daemon.recv(), dict)
                         print("\n%s Commands: "%args.target[0])
-                        for cmd in cmds.keys():
-                            print("  %s  -%s"%(cmd,cmds[cmd]))
+                        fancyprint(cmds)
                     else:
                         daemon.send(makeCommandMsg(args.command[0], myID, dest=args.target[0], args=args.command[1:]))
                         
                         if not args.nowait:
-                            result = strToMessage(daemon.recv())
-                            if result.getType() == ERROR_MSG_TYPE:
-                                print("ERROR",result.getValue())
-                            else:
-                                # since this is a general case interface, we dont really know 
-                                # how to interpret the result of an argument. But this can
-                                # be utilized in a script or a higher level interface. if you 
-                                # want to call smtg through your program be sure you can 
-                                # handle JSON 
-                                print(result.getValue()) 
+                            result = checkMsg(daemon.recv())
+                            # since this is a general case interface, we don't really know 
+                            # how to interpret the result of an argument. But this can
+                            # be utilized in a script or a higher level interface. if you 
+                            # want to call smtg through your program be sure you can 
+                            # handle JSON 
+                            print(result) 
                         else:
                             print("Command sent.")
             
+            # now lets close the port to indicate that we are finished.
+            daemon.close()
         except:
-            print("Error: Couldn't connect to the daemon. Is it running?")
+            raise
+            #print("Error: Couldn't connect to the daemon. Is it running?")
                 
 
 if __name__ == "__main__": main()

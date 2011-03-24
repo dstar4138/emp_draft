@@ -26,7 +26,6 @@ class Interface(Routee):
         """
         self._socket = socket
         self.router = router
-        self.router.register("interface", self)
         
     def handle_msg(self, msg):
         """ Interfaces "handle the message" by sending it to the 
@@ -38,7 +37,7 @@ class Interface(Routee):
         """ Runs the receiving portion of the interface. """
         from empbase.comm.messages import strToMessage
         
-        #LATER: Add security to this portion. Adjust message handling for privlage level?
+        #LATER: Add security to this portion. Adjust message handling for privilege level?
     
         logging.debug("starting interface comm")
         self._socket.setblocking(True)
@@ -51,9 +50,11 @@ class Interface(Routee):
             logging.error("interface died because: %s"%e)
         finally:
             logging.debug("ending interface comm")
-            self.router.deregister(self.ID)
+            self.router.rmInterface(self.ID)
+            self.close()
             
     def close(self):
         """ Closes the communication to the Interface. """
-        self._socket.shutdown()
+        try: self._socket.shutdown()
+        except Exception as e: logging.error(str(e))
 

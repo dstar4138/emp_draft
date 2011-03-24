@@ -13,8 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License. 
 """
 
-
-__version__ = "0.7.1"
+__version__="pre-alpha..."
 __description__ = """
 The EMP-Daemon is responsible for alerts, updates and other plug-in
 communications. However, any interaction should go through smtg rather
@@ -37,14 +36,16 @@ from empbase.comm.interface import Interface
 from empbase.registration.registry import Registry
 from empbase.attach.management import AttachmentManager
 from empbase.config.logger import setup_logging
+from empbase.comm.command import Command, CommandList
 from empbase.config.empconfigparser import EmpConfigParser
 
 from empbase.daemon.RDaemon import RDaemon
 from empbase.daemon.daemonipc import DaemonServerSocket
 from empbase.comm.routing import MessageRouter
-from empbase.comm.messages import makeErrorMsg, makeCommandMsg,  \
-                                      makeMsg, strToMessage, COMMAND_MSG_TYPE,  \
-                                      ERROR_MSG_TYPE 
+from empbase.comm.messages import makeCommandMsg
+
+def notimplemented(*args):
+    raise Exception("This command has not be implemented yet, sorry!")
 
 
 class EmpDaemon(RDaemon):
@@ -106,106 +107,108 @@ class EmpDaemon(RDaemon):
         self.start()
 
     
-    def handle_msg(self, msg):#FIXME: OMG EVERYTHING IS BROKEN, use get_commands
-        """ Handles the incoming messages passed to it from the CommReader. """
-        logging.debug("daemon received: %s" % msg)
-        action = strToMessage(msg)
-        if action is None:pass # the action is invalid, just skip
-        elif action.getType() == COMMAND_MSG_TYPE:
-            logging.debug("Daemon trying to run command now.")
-            source = self.ID # this can either be self.ID or None since its the daemon.
-            dest = action.getSource() # the destination is the person we got the msg from
-            if action.getValue() == "status":
-                routing.sendMsg(makeMsg("SMTG-D Running since: "+self.fm_start_time,source,dest))
-            elif action.getValue() == "cmds":
-                routing.sendMsg(makeMsg(["status","plugins","cmds","attachments", "activate","deactivate",
-                                         "alarms","plugid","alertid","var","cvar","help"],
-                                source,dest))
-            elif action.getValue() == "plugins":
-                routing.sendMsg(makeMsg(self.aman.getAllNames(),source,dest))
-            elif action.getValue() == "plugins":
-                routing.sendMsg(makeMsg(self.aman.getPlugNames(),source,dest))
-            elif action.getValue() == "alarms":
-                routing.sendMsg(makeMsg(self.aman.getAlarmNames(),source,dest))
-            elif action.getValue() == "id":
-                try:
-                    result = self.aman.getAttachmentID(action.get("args")[0])
-                    if result is not None:
-                        routing.sendMsg(makeErrorMsg("name does not exist.",None,dest))
-                    else:routing.sendMsg(makeMsg(result,source,dest))
-                except:
-                    routing.sendMsg(makeErrorMsg("id needs an argument.",None,dest))
-            elif action.getValue() == "idsearch": notimplemented(dest) #TODO: implement idsearch command to search for an id
-            elif action.getValue() == "var":notimplemented(dest) #TODO: implement var command to get internal variables
-            elif action.getValue() == "cvar":notimplemented(dest) #TODO: implement cvar to change variables
-            elif action.getValue() == "help": 
-                self.__help(dest, msg.get("args"))
+    def get_commands(self):
+        if not hasattr(self, "_commands"):
+            self.__setup_commands()
             
-            elif action.getValue() == "activate":
-                notimplemented(dest) #TODO: implement activate command to activate inactive plugins/alerters
-            elif action.getValue() == "deactivate":
-                notimplemented(dest) #TODO: implement deactivate command to deactivate active plugins/alerters
-            # the command does not exist.
-            else: routing.sendMsg(makeErrorMsg("invalid action",source,dest))
-        elif action.getType() == ERROR_MSG_TYPE:
-            # the daemon will log your error for you!
-            logging.error("error from %s: %s" % (action.getSource(), action.getValue()))
-        # the message is invalid, send the error back.
-        else: routing.sendMsg(makeErrorMsg("invalid message", None, action.getSource()))
-  
-  
-    def __help(self, dest, args):#FIXME: OMG EVERYTHING IS BROKEN
-        """ Generates a dictionary for you to print out for a help screen. As arguments
-        to this function, you can have:
-            - blank : this will cause the daemon to print out a help screen just for 
-                    the daemon
-            - a plug-ins id/name : this will give back a help screen for a given plugin
-            - an alerts id/name : this will give back a help screen for a given alerter
-            - the word "all" : a complete help screen
-        """
-        cmds = {"status":"get the daemon status, or the status of a plugin/alert given the id.",
-                "plugins": "get a list of plug-ins ids to names.",
-                "cmds": "get the daemon command list.",
-                "alarms": "get a list of alarms ids to names.",
-                "id": "given an attachments name, it will return the ID",
-                "idsearch": "returns whether a given id exists",
-                "var": "returns all internal variables and their values",
-                "cvar": "given a variable name and a value, it will change it to the given value.",
-                "help": "returns a help screen for the daemon, alerters, or a plugin, or even all of the above."}
-        try:
-            if len(args) >0:
-                if args[0] == "all":
-                    all = {"Daemon":cmds}
-                    try:
-                        for attach in self.aman.getAllPlugins():
-                            all[attach.name] = attach.plugin_object.get_commands()
-                    except: pass
-                    routing.sendMsg(makeMsg(all,None,dest))    
-                else: # its a plugin or an alert id.
-                    if args[0] == "daemon":
-                        routing.sendMsg(makeMsg(cmds, None, dest))
-                    elif routing.isRegisteredByID(args[0]):
-                        routing.sendMsg(makeMsg(
-                                    routing.getReferenceByID(args[0]).get_commands(), args[0], dest))
-                    elif routing.isRegisteredByName(args[0]):
-                        routing.sendMsg(makeMsg(
-                                    routing.getReferenceByName(args[0]).get_commands(), args[0], dest))
-                    else:
-                        routing.sendMsg(makeErrorMsg("invalid ID or Name",None,dest))
-            else:#just the daemon ones.
-                routing.sendMsg(makeMsg(cmds,None,dest))
+        return self._commands
+    
+    def __setup_commands(self):
+        """ Sets up the daemon's commands. """
+        self._commands = [Command("status", trigger=self.__cmd_status, help="get the daemon status, or the status of a plugin/alert given the id."),
+                          Command("plugs",  trigger=self.__cmd_plugs, help="get a list of plug-ins ids to names."),
+                          Command("cmds",   trigger=self.__cmd_cmds, help="get the daemon command list."),
+                          Command("alarms", trigger=self.__cmd_alarms, help="get a list of alarms ids to names."),
+                          Command("id",     trigger=self.__cmd_id, help="given an attachments name, it will return the ID"),
+                          Command("idsearch", trigger=self.__cmd_idsearch, help="returns whether a given id or name exists, returns a boolean"),
+                          Command("var",    trigger=self.__cmd_var, help="returns all internal variables and their values"),
+                          Command("cvar",   trigger=notimplemented, help="given a variable name and a value, it will change it to the given value."),
+                          Command("help",   trigger=self.__cmd_help, help="returns a help screen for the daemon, alerters, or a plug, or even all of the above."),
+                          Command("activate",   trigger=self.__cmd_activate, help="activates an attachment given an id or target name"),
+                          Command("deactivate", trigger=self.__cmd_deactivate, help="deactivates an attachment given an id or target name"),
+                          Command("subscribe",   trigger=notimplemented, help="subscribes a given alarm name/id to a given plug-in name/id or event id."),
+                          Command("unsubscribe",   trigger=notimplemented, help="unsubscribes a given alarm name/id to a given plug-in name/id or event id.")]
+
+
+    def __cmd_status(self, *args):
+        return "SMTG-D Running since: "+self.fm_start_time
+    
+    def __cmd_cmds(self, *args):
+        cmdlst = CommandList(self.get_commands())
+        return cmdlst.getNames()
+    
+    def __cmd_plugs(self, *args): 
+        return self.aman.getPlugNames()
+    def __cmd_alarms(self, *args):
+        return self.aman.getAlarmNames()
+    
+    def __cmd_id(self, *args): 
+        if len(args) > 0:
+            return self.registry.getId(args[0])
+        else: raise Exception("Id command needs a target name.")
+    def __cmd_idsearch(self, *args):
+        if len(args) > 0:
+            return self.registry._getIDFromCID(args[0]) is not None
+        else: raise Exception("idsearch command needs a target name or id.")
+        
+    def __cmd_var(self, *args):
+        vars = {}
+        for var in self.config.options("Daemon"):
+            vars[var] = self.config.get("Daemon", var)
+        for var in self.config.options("Logging"):
+            vars[var] = self.config.get("Logging", var)
+        return vars    
+    def __cmd_cvar(self, *args): pass
+    
+    def __cmd_activate(self, *args):
+        if len(args) > 0:
+            attach = self.aman.getAttachment(args[0])
+            if attach is None: raise Exception("Target name or id does not exist.")
+            if attach.is_activated: raise Exception("Target already active!")
+            attach.activate()
+            return "Activated"
+        else: raise Exception("activate command needs a target name or id.") 
+    def __cmd_deactivate(self, *args):
+        if len(args) > 0:
+            attach = self.aman.getAttachment(args[0])
+            if attach is None: raise Exception("Target name or id does not exist.")
+            if not attach.is_activated: raise Exception("Target already inactive!")
+            attach.deactivate()
+            return "De-activated"
+        else: raise Exception("deactivate command needs a target name or id.")
+        
+    def __cmd_subscribe(self, *args): pass
+    def __cmd_unsubscribe(self, *args): pass
                 
-        except Exception as e:
-            logging.exception(e)
-            routing.sendMsg(makeErrorMsg("error getting help", None, dest))
-            
-  
+    def __cmd_help(self, *args):
+        if len(args) <= 0: #cant be less but i like being complete.
+            cmds = CommandList(self.get_commands())
+            return cmds.getHelpDict()
+        else:
+            if args[0] == "all":
+                cmds = CommandList(self.get_commands())
+                all = {"Daemon":cmds.getHelpDict()}
+                try:
+                    for attach in self.aman.getAllPlugins():
+                        cmds = CommandList(attach.plugin_object.get_commands())
+                        all[attach.name] = cmds.getHelpDict()
+                except:pass
+                return all
+            else: # its a plug or an alert id.
+                if args[0] == "daemon":
+                    cmds = CommandList(self.get_commands())
+                    return cmds.getHelpDict()
+                elif self.registry.isRegistered(args[0]):
+                    attach = self.aman.getAttachment(args[0])
+                    if attach is None: raise Exception("Could not get target's commands.")
+                    cmds = CommandList(attach.get_commands())
+                    return cmds.getHelpDict()
+                else:
+                    raise Exception("Invalid target")
+                    
   
     def _run(self):
-        """ Starts the three threads that make up the internals of the daemon
-        and creates both the AlertManager and the PluginManager for them to pull
-        the Alerters and Plug-ins for the daemons use.
-        
+        """ 
             Here is a quick outline of what each of the three threads are and 
         do, for a more in-depth look, look at the consecutive method calls:
         
@@ -213,8 +216,9 @@ class EmpDaemon(RDaemon):
                 LoopPlugins every time interval. This time interval is set by 
                 the configuration file.
                 
-            - Thread 2: this is the CommReader._run() method. It handles all
-                inter-thread communication. See CommReader for more info.
+            - Thread 2: this is the MessageRouter.startRouter() method. It 
+                handles all inter-thread communication. See CommReader for 
+                more info.
                 
             - Thread 3: this is _t2(), it handles incoming communication to the
                 port that the SmtgDaemon listens to for Interfaces. See the
@@ -222,18 +226,21 @@ class EmpDaemon(RDaemon):
                 daemon. 
         """
         try:
+            # Load the registry from last time if it exists
             self.registry = Registry(self.config.getRegistryFile())
-            self.router   = MessageRouter(self.registry)
+            self.ID       = self.registry.daemonId() 
             
-            # load the plug-in manager now and search for the plug-ins.
-            self.aman = AttachmentManager(self.config.getAttachmentDirs(), 
-                                          self.config,
-                                          self.router,
-                                          self.registry)
+            # load the attachment manager now and search for the user's 
+            # attachments. It will only load them if they pass inspection.
+            self.aman = AttachmentManager(self.config, self.registry)
             self.aman.collectPlugins()
             
+            # Set up the router using the loaded registry
+            self.router   = MessageRouter(self.registry, 
+                                          self, self.aman)
+            
             #activates the attachments based on user cfg file. 
-            # if the attachment was a SignalPlugin, it will throw the plug-ins
+            # if the attachment was a SignalPlugin, it will throw the plug's
             # run() function into a new thread.
             self.aman.activateAttachments()
     
@@ -241,11 +248,11 @@ class EmpDaemon(RDaemon):
             Thread(target=self.router.startRouter,
                    kwargs={"triggermethod":self.isRunning}).start()
             
-            # start the interface thread
+            # start the interface server thread
             Thread(target=self.__t2).start()
     
             # start the pull loop.
-            logging.debug("pull-thread started")
+            logging.debug("pull-loop thread started")
             while self.isRunning():
                 
                 # get all active loop plug-ins
@@ -278,10 +285,10 @@ class EmpDaemon(RDaemon):
             self.router.flush()
             self.config.save( self.aman.getAllPlugins() )
             self.registry.save()
-            logging.debug("pull-thread is dead")
+            logging.debug("pull-loop thread is dead")
 
         except Exception as e:
-            logging.error("Pull-thread was killed by: %s" % str(e))
+            logging.error("Pull-loop thread was killed by: %s" % str(e))
             logging.exception(e)
         
             
@@ -292,7 +299,7 @@ class EmpDaemon(RDaemon):
         
         logging.debug("communication-thread started")
         # Create socket and bind to address
-        whitelist = str(self.config.get("Daemon", "whitelisted-ips")).split(",")
+        whitelist = self.config.getlist("Daemon", "whitelisted-ips")
         isocket = DaemonServerSocket(port=self.getComPort(),
                                      ip_whitelist=whitelist,
                                      externalBlock=self.config.getboolean("Daemon","local-only"),
@@ -305,14 +312,14 @@ class EmpDaemon(RDaemon):
         
                 # create an interface out of the socket
                 # LATER: authentication can go here, before they connect. (eg logging in)
-                interface = Interface(client_socket)
-                logging.debug("identifier: %s"% interface.ID)
+                interface = Interface(self.router, client_socket)
+                self.registry.registerInterface(interface) #gives the interface its ID
+                self.router.addInterface(interface)
             
                 # since there are abilities that this person can perform throw
                 # to new thread by way of the interface class
-                self.router.sendMsg(makeCommandMsg("proceed",self.ID, dest=interface.ID))
+                self.router.sendMsg(makeCommandMsg("proceed", self.ID, dest=interface.ID))
                 Thread(target=interface.receiver).start()
-                logging.debug("pushed interface to new thread.")
             except timeout:pass #catches a timeout and allows for daemon status checking
             except Exception as e: logging.exception(e)
         isocket.close()

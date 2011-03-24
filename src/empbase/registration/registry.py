@@ -36,9 +36,9 @@ is fairly simple:
     <events>
         <event pid='' eid='' name=''>
             <subscribers>
-                <id>...</id>
-                <id>...</id>
-                <id>...</id>
+                <sub id='...' />
+                <sub id='...' />
+                <sub id='...' />
             </subscribers>
         </event>
         ...
@@ -100,6 +100,7 @@ class Registry():
                     event.addSubscriber(sub.attrib["id"])
                 self._events[event.ID] = event
 
+            logging.debug("EVENTS:%s"%str(self._events))
         except IOError: pass # no such file? who cares...
         except Exception as e: logging.error(e)
          
@@ -114,7 +115,8 @@ class Registry():
             #Add attachments to the registry!
             attachments = ET.Element("attachments")
             for attach in self._attachments.values():
-                ET.SubElement(attachments, attach.type, attrib=attach.getAttrib())
+                if attach.type in [PLUG, ALARM]:
+                    ET.SubElement(attachments, attach.type, attrib=attach.getAttrib())
             root.append(attachments)
             
             #Add all the events and their subscribers!
@@ -207,7 +209,7 @@ class Registry():
         the daemon shuts down.
         """
         id = self.__register(cmd, module, ref, PLUG)
-        logging.debug("--Registered a Plug(%s)" % id)
+        logging.debug("--Registered a Plug(%s, %s)" % (id, cmd))
         return id 
 
     def registerAlarm(self, cmd, module, ref):
@@ -215,12 +217,23 @@ class Registry():
         the daemon shuts down.
         """
         id = self.__register(cmd, module, ref, ALARM)
-        logging.debug("--Registered an Alarm(%s)" % id)
+        logging.debug("--Registered an Alarm(%s, %s)" % (id, cmd))
         return id 
 
+
+    def register(self, cmd, module, ref):
+        """ Attempts to register the attachment by determining its type. """
+        from empbase.attach.attachments import EmpAlarm, EmpPlug
+        if isinstance(ref, EmpAlarm):
+            self.__register(cmd, module, ref, type=ALARM)
+        elif isinstance(ref, EmpPlug):
+            self.__register(cmd, module, ref, type=PLUG)
+        else: raise Exception("Attempted to register an object thats not an EMP Attachment.")
+        
+        
     def deregister(self, cid):
         """ Deregisters a Plug/Alarm/Interface given an id or cmd. """
-        id = self.__getIDFromCID(cid)
+        id = self._getIDFromCID(cid)
         if id is not None:
             try:    self._attachments.pop(id)
             except: return False
@@ -228,7 +241,7 @@ class Registry():
  
     def isRegistered(self, cid):
         """ Checks if an id or command name is registered. """
-        return (self.__getIDFromCID(cid) is not None)
+        return (self._getIDFromCID(cid) is not None)
     
             
     def daemonId(self):
@@ -252,7 +265,7 @@ class Registry():
     
     def getId(self, cmd):
         """ Quickly gets the ID for a command name. """
-        return self.__getIDFromCID(cmd)
+        return self._getIDFromCID(cmd)
     
     def getIds(self):
         """ Quickly gets a list of all the attachment IDs. """
@@ -262,7 +275,7 @@ class Registry():
         """ Resets the attachment's target name, the first parameter can be 
         the target's ID or its previous command string.
         """
-        id = self.__getIDFromCID(cid)
+        id = self._getIDFromCID(cid)
         if id is not None:
             self._attachments[id].cmd = newcmd
             return True
@@ -280,12 +293,8 @@ class Registry():
     def loadEvent(self, name, pid ):
         """ Saves an event to the registry if it doesn't exist, if it
         does then it returns the ID."""
-        if self.isEventLoaded(name):
-            for id in self._events.keys():
-                if self._events[id].name == name:
-                    return id
-            #SHOULD NEVER GET HERE BECAUSE IT WAS FOUND IN THE LIST
-            raise Exception("Error generating a new ID")
+        id = self.isEventLoaded(name, pid)
+        if id is not None: return id
         else:
             eid = self.__genNewEventId()
             self._events[eid] = RegEvent(eid, pid, name)
@@ -299,17 +308,22 @@ class Registry():
         try: return self._events.pop(eid, None) is not None
         except: return False
     
-    def isEventLoaded(self, name):
+    def isEventLoaded(self, name, pid):
+        """ Checks if an event by the given name for the given plug is already 
+        registered.
+        """
         for event in self._events.values():
-            if event.name == name:
-                return True
-        return False
+            if event.name == name and event.pid == pid:
+                return event.ID
+        return None
             
     
-    def __getIDFromCID(self, cid):
+    def _getIDFromCID(self, cid):
         """ Utility function that returns the id of a given command or id of
         an attachment.
         """
+        if cid == "daemon": return self._did
+        
         if cid in self._attachments or cid == self._did:
             return cid
         
@@ -322,16 +336,14 @@ class Registry():
         """ Utility function for generating new attachment IDs. """ 
         while 1:
             tmp = "%s" % str(random.random())[2:2+AID_SIZE]
-            if tmp in self._attachments:
-                continue
-            else:
-                return tmp
+            if tmp in self._attachments: continue
+            else: return tmp
             
     def __genNewEventId(self):
         """ Utility function for generating new event IDs. """
         while 1:
             tmp = "%s" % str(random.random())[2:2+EID_SIZE]
-            if tmp in self._events:
-                continue
-            else:
-                return tmp
+            if tmp in self._events: continue
+            else: return tmp
+            
+            
