@@ -13,9 +13,10 @@ See the License for the specific language governing permissions and
 limitations under the License. 
 """
 import empbase.event.events as empevents
+import empbase.event.alerts as empalerts
 import empbase.attach.attachments as attach
 
-# RegItem Types
+# RegAttach Types
 PLUG = "plug"
 ALARM = "alarm"
 INTERFACE = "interface"
@@ -59,32 +60,6 @@ class RegEvent():
         self.ID = id
         self.pid = pid
         self.name = name
-        self.__subscribers = []
-    
-    def addSubscriber(self, id):
-        """ Adds an Alarm ID to the subscriber list."""
-        self.__subscribers.append(id)
-            
-    def removeSubscriber(self, id):
-        """ Removes an Alarm ID from the subscriber list, if it does not exist 
-        or there is an issue removing it, then this function returns False. 
-        Otherwise True.
-        """
-        try:
-            self.__subscribers.remove(id)
-            return True
-        except: return False
-    
-    def subscribes(self, id):
-        """ Returns True if the id is in the event's subscribers list. False
-        otherwise. 
-        """
-        return id in self.__subscribers
-    
-    def subscribers(self):
-        """ Returns the list of subscribers to the Event this 
-        represents."""
-        return self.__subscribers
     
     def getAttrib(self):
         """ Returns a dictionary representing this object, this makes it
@@ -97,10 +72,73 @@ class RegEvent():
     def __eq__(self, other):
         if type(other) is str:
             return self.ID == other
+        elif type(other) is tuple:
+            return other == (self.name, self.pid)
+        elif type(other) is RegEvent:
+            return self.ID == other.ID and \
+                   self.name == other.name and \
+                   self.pid == other.pid
         elif type(other) is empevents.Event:
             return self.ID == other.ID and \
                    self.name == other.name and \
                    self.pid == other.pid
         else: return False
+
+
+class RegAlert():
+    """ This just represents an alert in the registry system."""        
+    def __init__(self, id, aid, name):
+        self.ID = id
+        self.aid = aid
+        self.name = name
+            
+    def getAttrib(self):
+        """ Returns a dictionary representing this object, this makes it
+        easier to push it to XML in the Registry.
+        """
+        return {"aid":str(self.aid),
+                "id":str(self.ID),
+                "name":str(self.name)}
         
+    def __eq__(self, other):
+        if type(other) is str:
+            return self.ID == other
+        elif type(other) is tuple:
+            return other == (self.name, self.aid)
+        elif type(other) is RegAlert:
+            return self.ID == other.ID and \
+                   self.name == other.name and \
+                   self.aid == other.aid
+        elif type(other) is empalerts.Alert:
+            return self.ID == other.ID and \
+                   self.name == other.name and \
+                   self.aid == other.aid
+        else: return False
+        
+        
+class RegSubscription():
+    """ """        
+    def __init__(self, id, eid, lid):
+        self.ID = id
+        self.eid = eid
+        self.lid = lid
+            
+    def getAttrib(self):
+        return {"eid":str(self.eid),
+                "lid":str(self.lid),
+                "id":str(self.ID)}
+    
+    def asTuple(self):
+        return (self.lid, self.eid)    
+        
+    def __eq__(self, other):
+        if type(other) is str:
+            return self.ID == other
+        elif type(other) is tuple:
+            return other == (self.lid, self.eid)
+        elif type(other) is RegSubscription:
+            return self.ID == other.ID and \
+                   self.lid == other.lid and \
+                   self.eid == other.eid
+        else: return False
         

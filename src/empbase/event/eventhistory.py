@@ -12,25 +12,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and 
 limitations under the License. 
 """
-from empbase.event.alerts import Alert
-from empbase.attach.attachments import EmpAlarm
 
-class ExecAlert(Alert):
-    def __init__(self, name, aid, progpath):
-        Alert.__init__(self, name, aid)
-        
-    def run(self, eventobj):
-        pass 
+#TODO: write event history module!
+class EventHistory():
+    """ Holds the history of all events ever triggered. It allows for
+    querying the history logs and saving to them. 
+    """
+    def __init__(self, config): pass
+    def save(self): pass
+    def load(self): pass
+    def __bufferBack(self): pass
+    def __clearBuffer(self): pass
+    def triggeredLast(self, eid): pass
+    def triggered(self, eid): pass
     
-    
-
-class ExecAlarm(EmpAlarm):
-    """ Runs a program when an alert happens."""
-    
-    def __init__(self, conf):
-        """Sets up the alerter."""
-        EmpAlarm.__init__(self,conf)
-     
-        
-     
     

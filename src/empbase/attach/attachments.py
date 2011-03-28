@@ -20,7 +20,7 @@ limitations under the License.
 #  your program. Please consult this page for more information:
 #    http://wiki.python.org/moin/IntegratingPythonWithOtherLanguages
 #
-__version__="0.9"
+__version__="0.9.2"
 
 from threading import Thread
 from yapsy.IPlugin import IPlugin
@@ -85,8 +85,8 @@ class EmpAlarm(EmpAttachment):
         """
         EmpAttachment.__init__(self, config)
     
-    def alert(self, *args):
-        """ Runs the alert process. This is the core of an alert. """
+    def get_alerts(self):
+        """ Gets the possible alerts with this Alarm!"""
         raise NotImplementedError("alert() not implemented")
     
 

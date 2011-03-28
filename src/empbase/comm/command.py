@@ -37,7 +37,7 @@ class Command():
             return other.name == self.name
         else:
             return False
-        
+
     def run(self, *args):
         """ Runs the function this Command represents."""
         if self.trigger is None:

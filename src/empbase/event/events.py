@@ -12,13 +12,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and 
 limitations under the License. 
 """
+from threading import Lock
 from empbase.comm.messages import makeAlertMsg
-from empbase.event.eventmanager import triggerEvent
+from empbase.event.eventmanager import triggerEvent, detriggerEvent
 
 
 #This is the id of an unknown event.
 UNKNOWN = "<UNKNOWNOMG>"
-
+DEFAULT_HALFLIFE = 1 #second
 
 class Event():
     """ This is the base type of event that can happen within EMP,
@@ -27,14 +28,23 @@ class Event():
     who to send to.
     """
     
-    def __init__(self, plug, name, msg=""):
+    def __init__(self, plug, name, msg="", description=""):
         """ All events have a string message that is sent to the alarm,
         the alarm can choose to use it if it wants to.
         """
         self.plug = plug
         self.name = name
-        self.msg = msg
-        self.ID = UNKNOWN   
+        self.msg  = msg
+        self.description = description
+        self.ID   = UNKNOWN
+        self.halflife = DEFAULT_HALFLIFE
+        self.triggered = False
+        self.triggering = Lock()
+        
+        # Group variables will be set and used if this event is part of an
+        # event group.
+        self.group      = None
+        self.is_default = False
     
     def _getPID(self):
         return self.plug.ID
@@ -43,9 +53,36 @@ class Event():
         """This is the method you must call when you want to trigger
         this Event.
         """
+        self.triggering.acquire()
+        if self.triggered: return
+        
         if msg is not None: 
             self.msg = msg
+            
+        if self.group is not None:
+            self.group.triggerCallback()
         triggerEvent(self.ID, self.msg)
+        
+        self.triggered = True
+        self.triggering.release()
+
+    def detrigger(self):
+        self.triggering.acquire()
+        if not self.triggered: return
+        detriggerEvent(self.ID)
+        if self.group is not None:
+            self.group.detriggerCallback()
+        self.triggered = False
+        self.triggering.release()    
+        
+
+
+    def __eq__(self, other):
+        if not isinstance(other, Event): return False
+        return (self.name == other.name) and \
+               (self.ID   == other.ID)   and \
+               (self.plug.ID == other.plug.ID)
+    
 
     def __str__(self):
         """ When it wants to turn itself into a string it uses the 
@@ -53,17 +90,47 @@ class Event():
         return str(makeAlertMsg(self.msg, self.plug.ID, title=self.name))
 
 
-class SubEvent(Event):
-    """ These are events that users create based on events of Plugs. Plugs
-    Can also create these if it wishes to make things easier. (e.g. It could
-    make several SubEvents for every file it watches which are all related
-    to an Event for when a file changes.
-    """
-    def __init__(self, pid, eid, name, msg=""):
-        self.ID = UNKNOWN
-        self.eid = eid
-        Event.__init__(self, pid, name, msg)
+EGROUP_LOGIC = 0
+EGROUP_RADIO = 1
+EGROUP_ALL   = 2
+EGROUP_MUST  = 3
 
+class EventGroup():
+    def __init__(self, plug, name, type=EGROUP_LOGIC):
+        self.type = type
+        self.name = name
+        self.pref = plug
+        self.ID   = UNKNOWN
+        self.events  = []
+        self.default = None
+        self.triggering = False
+        
+    def addEvent(self, event, default=False):
+        self.events.append(event)
+        event.group = self
+        event.is_default = default
+        if default: self.default = len(self.events)-1
+    
+    def triggerCallback(self, tevent):
+        self.triggering = True #LATER: race condition?? make into a semiphore??
+        if self.triggering: return
+        
+        if self.type == EGROUP_ALL:
+            for event in self.events:
+                if event == tevent: continue
+                event.trigger()
+        elif self.type == EGROUP_RADIO:
+            for event in self.events():
+                if event == tevent: continue
+                event.detrigger()
+        self.triggering = False
+        
+    def detriggerCallback(self):
+        if self.type == EGROUP_MUST:
+            if self.default is not None:
+                self.events[self.default].trigger()
+            else: raise Exception("Event Group(%s) does not have a default!")
+    
 """
 Sub event construction idea...
 
@@ -216,4 +283,8 @@ Implementation thoughts...
     Is there a way of implementing just enough that we don't have to implement
     the whole thing until later? I would really like to get an alpha version 
     out to run tests on...
+    
+    Are all events able to be 'subevented' from? 
+    
+    Is the language that we would be building verbose enough?
 """

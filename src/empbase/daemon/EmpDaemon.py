@@ -34,6 +34,7 @@ from threading import Thread
 
 from empbase.comm.interface import Interface
 from empbase.registration.registry import Registry
+from empbase.event.eventmanager import EventManager
 from empbase.attach.management import AttachmentManager
 from empbase.config.logger import setup_logging
 from empbase.comm.command import Command, CommandList
@@ -47,6 +48,15 @@ from empbase.comm.messages import makeCommandMsg
 def notimplemented(*args):
     raise Exception("This command has not be implemented yet, sorry!")
 
+def parsesubs(substr):
+    """ Parses the subscription strings."""
+    tmp = substr.split(".")
+    if len(tmp) >= 2:
+        return tmp[0],tmp[1],tmp[1:]
+    elif len(tmp) == 1:
+        return tmp[0], None, []
+    else: return substr, None, []
+         
 
 class EmpDaemon(RDaemon):
     """ The Daemon for SMTG, all communication to this daemon goes through smtgd.py
@@ -84,7 +94,10 @@ class EmpDaemon(RDaemon):
                               dprog=dprg,
                               dargs=configfile)
          
-    def startup(self):     
+    def startup(self):
+        """ Startup the daemon if there is a variable called boot-launch and 
+        it's True.
+        """
         if self.config.getboolean("Daemon", "boot-launch"):
             RDaemon.start(self)
          
@@ -115,19 +128,25 @@ class EmpDaemon(RDaemon):
     
     def __setup_commands(self):
         """ Sets up the daemon's commands. """
-        self._commands = [Command("status", trigger=self.__cmd_status, help="get the daemon status, or the status of a plugin/alert given the id."),
+        self._commands = [Command("var",    trigger=self.__cmd_var, help="returns all internal variables and their values"),
+                          Command("cvar",   trigger=self.__cmd_cvar, help="given a variable name and a value, it will change it to the given value."),
+                          Command("trigger",trigger=self.__cmd_trigger, help="hand trigger an event given an id or event string"),
+                          Command("status", trigger=self.__cmd_status, help="get the daemon status, or the status of a plugin/alert given the id."),
+                          Command("events", trigger=self.__cmd_events, help="get a list of all the events that a given plug has"),
+                          Command("alerts", trigger=self.__cmd_alerts, help="get a list of all the alerts that a given alarm has"),
                           Command("plugs",  trigger=self.__cmd_plugs, help="get a list of plug-ins ids to names."),
                           Command("cmds",   trigger=self.__cmd_cmds, help="get the daemon command list."),
                           Command("alarms", trigger=self.__cmd_alarms, help="get a list of alarms ids to names."),
                           Command("id",     trigger=self.__cmd_id, help="given an attachments name, it will return the ID"),
-                          Command("idsearch", trigger=self.__cmd_idsearch, help="returns whether a given id or name exists, returns a boolean"),
-                          Command("var",    trigger=self.__cmd_var, help="returns all internal variables and their values"),
-                          Command("cvar",   trigger=notimplemented, help="given a variable name and a value, it will change it to the given value."),
-                          Command("help",   trigger=self.__cmd_help, help="returns a help screen for the daemon, alerters, or a plug, or even all of the above."),
-                          Command("activate",   trigger=self.__cmd_activate, help="activates an attachment given an id or target name"),
-                          Command("deactivate", trigger=self.__cmd_deactivate, help="deactivates an attachment given an id or target name"),
-                          Command("subscribe",   trigger=notimplemented, help="subscribes a given alarm name/id to a given plug-in name/id or event id."),
-                          Command("unsubscribe",   trigger=notimplemented, help="unsubscribes a given alarm name/id to a given plug-in name/id or event id.")]
+                          Command("idsearch",      trigger=self.__cmd_idsearch, help="returns whether a given id or name exists, returns a boolean"),
+                          Command("curtriggered",  trigger=self.__cmd_curtriggered, help="the currently triggered events"),
+                          Command("attachments",   trigger=self.__cmd_attachments, help="get a list of all attachments"),
+                          Command("help",          trigger=self.__cmd_help, help="returns a help screen for the daemon, alerters, or a plug, or even all of the above."),
+                          Command("activate",      trigger=self.__cmd_activate, help="activates an attachment given an id or target name"),
+                          Command("deactivate",    trigger=self.__cmd_deactivate, help="deactivates an attachment given an id or target name"),
+                          Command("subscribe",     trigger=self.__cmd_subscribe, help="subscribes a given alarm name/id to a given plug-in name/id or event id."),
+                          Command("subscriptions", trigger=self.__cmd_subscriptions, help="get a list of target subscriptions"),
+                          Command("unsubscribe",   trigger=self.__cmd_unsubscribe, help="unsubscribes a given alarm name/id to a given plug-in name/id or event id.")]
 
 
     def __cmd_status(self, *args):
@@ -139,17 +158,20 @@ class EmpDaemon(RDaemon):
     
     def __cmd_plugs(self, *args): 
         return self.aman.getPlugNames()
+    
     def __cmd_alarms(self, *args):
         return self.aman.getAlarmNames()
     
     def __cmd_id(self, *args): 
         if len(args) > 0:
-            return self.registry.getId(args[0])
+            return self.registry.getAttachId(args[0])
         else: raise Exception("Id command needs a target name.")
+        
     def __cmd_idsearch(self, *args):
         if len(args) > 0:
-            return self.registry._getIDFromCID(args[0]) is not None
-        else: raise Exception("idsearch command needs a target name or id.")
+            return self.registry.isRegistered(args[0])
+        else: 
+            raise Exception("idsearch command needs a target name or id.")
         
     def __cmd_var(self, *args):
         vars = {}
@@ -157,8 +179,7 @@ class EmpDaemon(RDaemon):
             vars[var] = self.config.get("Daemon", var)
         for var in self.config.options("Logging"):
             vars[var] = self.config.get("Logging", var)
-        return vars    
-    def __cmd_cvar(self, *args): pass
+        return vars
     
     def __cmd_activate(self, *args):
         if len(args) > 0:
@@ -177,8 +198,18 @@ class EmpDaemon(RDaemon):
             return "De-activated"
         else: raise Exception("deactivate command needs a target name or id.")
         
-    def __cmd_subscribe(self, *args): pass
-    def __cmd_unsubscribe(self, *args): pass
+        
+    def __cmd_subscribe(self, *args): return notimplemented()
+    def __cmd_subscriptions(self, *args): return notimplemented()
+    def __cmd_unsubscribe(self, *args): return notimplemented()
+        
+        
+    def __cmd_trigger(self, *args): return notimplemented()
+    def __cmd_cvar(self, *args): return notimplemented()        
+    def __cmd_events(self, *args): return notimplemented()
+    def __cmd_alerts(self, *args): return notimplemented()
+    def __cmd_curtriggered(self, *args): return notimplemented()
+    def __cmd_attachments(self, *args): return notimplemented()
                 
     def __cmd_help(self, *args):
         if len(args) <= 0: #cant be less but i like being complete.
@@ -232,7 +263,11 @@ class EmpDaemon(RDaemon):
             
             # load the attachment manager now and search for the user's 
             # attachments. It will only load them if they pass inspection.
-            self.aman = AttachmentManager(self.config, self.registry)
+            self.aman = AttachmentManager( self.config, 
+                                           self.registry,
+                                           EventManager(self.config, 
+                                                        self.registry, 
+                                                        self.isRunning))
             self.aman.collectPlugins()
             
             # Set up the router using the loaded registry

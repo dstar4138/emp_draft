@@ -17,7 +17,6 @@ limitations under the License.
 #These are the default configurations that are loaded based on the type
 #of operating system, and system setup.
 ######
-import logging
 import sys, os
 
 # the platform you are running on!
@@ -49,6 +48,9 @@ DEFAULT_CONFIGS = {
     # the location of the directory to save all data to, can't be relative. 
       "base-dir" : "",
     
+    # the location all attachments should save their data
+      "save-dir" : "",
+    
     # the port number for the interface communications.
       "port" : "8080",
  
@@ -64,11 +66,14 @@ DEFAULT_CONFIGS = {
       "whitelisted-ips" : "",
 
     # Allow all incoming connections to connect to the daemon.      
-      "allow-all" : "false"
+      "allow-all" : "false",
+      
+    # Allow emp to boot up at startup
+      "boot-launch" : "true"
     },
 
 #Logging section-
-# It has its own section since theres a lot to possibly be able to log.
+# It has its own section since there's a lot to possibly be able to log.
 "Logging" :
     {
     # Logging can be turned on and off by the master switch (default to True) 
@@ -114,7 +119,6 @@ if CUR_PLATFORM.find("linux")!=-1:    #linux systems.
     
     DEFAULT_CONFIGS["Daemon"]["pid-file"]="/var/tmp/emp.pid"
     DEFAULT_CONFIGS["Daemon"]["registry-file"]=SAVE_DIR+"/registry.xml"
-    DEFAULT_CONFIGS["Daemon"]["base-dir"]=BASE_DIR
     
     DEFAULT_CONFIGS["Logging"]["log-file"]=BASE_DIR+"/errors.log"
     
@@ -150,6 +154,7 @@ elif CUR_PLATFORM.find("darwin")!=-1: # Mac OSX, older?
     pass #TODO: write this!!
 
 else:  # the poor souls not using one of the above. :(
+    import logging
     logging.warning("Could not determine current operating system.")
 
 

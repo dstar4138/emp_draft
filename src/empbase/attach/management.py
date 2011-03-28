@@ -14,7 +14,6 @@ limitations under the License.
 """
 
 import logging
-from empbase.event.eventmanager import EventManager
 from empbase.attach.VariablePluginManager import VariablePluginManager
 from empbase.attach.attachments import EmpAlarm, EmpPlug, LoopPlug, SignalPlug
 
@@ -31,14 +30,14 @@ ATTACH_EXT = "emp"
 
 class AttachmentManager(VariablePluginManager):
     
-    def __init__(self, conf, registry):
-        VariablePluginManager.__init__( self, conf, registry, 
+    def __init__(self, config, registry, eman):
+        VariablePluginManager.__init__( self, config, registry, 
                                         categories_filter=ATTACH_CAT,
-                                        directories_list=conf.getAttachmentDirs(),
+                                        directories_list=config.getAttachmentDirs(),
                                         plugin_info_ext=ATTACH_EXT )
         # only active attachments have their events registered 
         self._registry = registry
-        self.eman = EventManager(registry, self)
+        self.eman = eman
         
     def activateAttachments(self):
         """ Activates the attachments that want to be activated on
@@ -52,7 +51,7 @@ class AttachmentManager(VariablePluginManager):
                         logging.debug("should have loaded events for: %s"%attach.name)
                         self.eman.loadEvents(attach.plugin_object.get_events())
                     else: #EmpAlarm
-                        self.eman.addAlarm(attach.plugin_object)
+                        self.eman.loadAlerts(attach.plugin_object.get_alerts())
                     attach.plugin_object.activate()
                 except Exception as e:
                     logging.error(e)
@@ -114,7 +113,7 @@ class AttachmentManager(VariablePluginManager):
                 return alarm.plugin_object
     
     def getAttachment(self, cid):
-        id = self._registry.getId(cid)
+        id = self._registry.getAttachId(cid)
         for attach in self.getAllPlugins():
             if attach.plugin_object.ID == id:
                 return attach.plugin_object

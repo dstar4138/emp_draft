@@ -66,4 +66,4 @@ def setup_logging(configuration):
                             datefmt=_DATE_FORMAT_,
                             filename=configuration.get("Logging","log-file"))
 
-    
+    #TODO: utilize a RotatingFileHandler with a max byte size of 1mb.
