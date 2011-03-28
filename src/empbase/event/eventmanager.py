@@ -17,6 +17,7 @@ import queue
 import random
 import logging
 from threading import Thread
+from empbase.event.events import UNKNOWN
 from empbase.event.eventhistory import EventHistory
 
 def triggerEvent(eid, msg):
@@ -37,6 +38,52 @@ def detriggerEvent(eid):
         Thread(target=_theEManager_.detriggerEvent, args=[eid,]).start()
     else: # or eid == UNKNOWN
         logging.debug("Event(%s) was triggered before EM was initialized." % eid)
+     
+     
+     
+def registerEvent(event):
+    """ Can be used for dynamic runtime creation of Events. Shouldn't throw the 
+    loading into a new thread because we don't want accidental race conditions. 
+    """
+    if _theEManager_ is not None:
+        _theEManager_.loadEvent(event)
+    else:
+        logging.debug("Event tried to be registered before EM was initialized." )
+     
+
+def deregisterEvent(event):
+    """ Can be used for dynamic runtime distruction of Events. Shouldn't throw  
+    the loading into a new thread because we don't want accidental race 
+    conditions. 
+    """
+    if _theEManager_ is not None:
+        _theEManager_.unloadEvent(event)
+    else:
+        logging.debug("Event tried to be deregistered before EM was initialized." )
+     
+def registerAlert(alert):
+    """ Can be used for dynamic runtime creation of Alerts. Shouldn't throw the 
+    loading into a new thread because we don't want accidental race conditions. 
+    """
+    if _theEManager_ is not None:
+        _theEManager_.loadAlert(alert)
+    else:
+        logging.debug("Alert tried to be registered before EM was initialized." )
+     
+
+def deregisterAlert(alert):
+    """ Can be used for dynamic runtime distruction of Alerts. Shouldn't throw  
+    the loading into a new thread because we don't want accidental race 
+    conditions. 
+    """
+    if _theEManager_ is not None:
+        _theEManager_.unloadAlert(alert)
+    else:
+        logging.debug("Alert tried to be deregistered before EM was initialized." )
+     
+        
+    
+    
         
         
 """ The event manager is a singleton, this is it."""
@@ -66,6 +113,10 @@ class EventManager():
         """Returns the EventManager, make sure it was initialized first."""
         return _theEManager_        
     
+    def loadEvent(self, event):
+        eid = self.registry.loadEvent(event.name, event._getPID())
+        event.ID = eid
+        self.eventmap[eid] = event
     
     def loadEvents(self, eventlist):
         for event in eventlist:
@@ -73,12 +124,31 @@ class EventManager():
             event.ID = eid
             self.eventmap[eid] = event
             
+    def unloadEvent(self, event):
+        if self.registry.unloadEvent(event.ID):
+            if self.eventmap.pop(event.ID):
+                event.ID = UNKNOWN
+                return True
+        return False
+        
+            
+    def loadAlert(self, alert):
+        lid = self.registry.loadEvent(alert.name, alert.aid)
+        alert.ID = lid
+        self.alertmap[lid] = alert
+            
     def loadAlerts(self, alertlist):
         for alert in alertlist:
             lid = self.registry.loadEvent(alert.name, alert.aid)
             alert.ID = lid
             self.alertmap[lid] = alert
     
+    def unloadAlert(self, alert):
+        if self.registry.unloadAlert(alert.ID):
+            if self.alertmap.pop(alert.ID):
+                alert.ID = UNKNOWN
+                return True
+        return False
     
     def triggerEvent(self, eid):
         self.eventqueue.append(eid)

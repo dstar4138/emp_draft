@@ -366,7 +366,14 @@ class Registry():
         ever need this one, but I thought I should add it for completeness
         sake.
         """
-        try: return self._events.pop(eid, None) is not None
+        try: 
+            tmp  = self._subscriptions
+            self._subscriptions.clear()
+            for k in tmp.keys(): #FIXME: There needs to be a faster way of doing this.
+                if tmp[k].eid != eid:
+                    self._subscriptions[k] = tmp[k]
+            
+            return self._events.pop(eid, None) is not None
         except: return False
     
     def isEventLoaded(self, name, aid):
@@ -391,7 +398,14 @@ class Registry():
             return lid
     
     def unloadAlert(self, lid):
-        try: return self._alerts.pop(lid, None) is not None
+        try:
+            tmp  = self._subscriptions
+            self._subscriptions.clear()
+            for k in tmp.keys(): #FIXME: There needs to be a faster way of doing this.
+                if tmp[k].lid != lid:
+                    self._subscriptions[k] = tmp[k]
+
+            return self._alerts.pop(lid, None) is not None
         except: return False
     
     def isAlertLoaded(self, name, aid):

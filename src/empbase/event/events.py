@@ -14,7 +14,8 @@ limitations under the License.
 """
 from threading import Lock
 from empbase.comm.messages import makeAlertMsg
-from empbase.event.eventmanager import triggerEvent, detriggerEvent
+from empbase.event.eventmanager import triggerEvent, detriggerEvent, \
+                                       registerEvent, deregisterEvent
 
 
 #This is the id of an unknown event.
@@ -75,6 +76,20 @@ class Event():
         self.triggered = False
         self.triggering.release()    
         
+    def register(self):
+        """ Register this event with the event manager. You NEED to run this if 
+        the event was created during run time. Also, make sure you add this event
+        to the list that gets returned when the daemon calls get_events().
+        """
+        registerEvent( self )
+    
+    def deregister(self):
+        """ Removes this event from the subscription lists and the event 
+        manager. You NEED to call this if you are destroying events at runtime. 
+        Also, make sure you remove it from the list of events that get returned
+        when the daemon calls get_events.
+        """
+        deregisterEvent( self )
 
 
     def __eq__(self, other):
@@ -110,6 +125,12 @@ class EventGroup():
         event.group = self
         event.is_default = default
         if default: self.default = len(self.events)-1
+    
+    def removeEvent(self, event):
+        self.events.remove(event)
+        event.group = None
+        if event.is_default and self.default == event:
+            self.default = None
     
     def triggerCallback(self, tevent):
         self.triggering = True #LATER: race condition?? make into a semiphore??
