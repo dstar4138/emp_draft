@@ -17,8 +17,9 @@ import queue
 import random
 import logging
 from threading import Thread
-from empbase.event.events import UNKNOWN
 from empbase.event.eventhistory import EventHistory
+
+UNKNOWN = "<UNKNOWNOMGS>"
 
 def triggerEvent(eid, msg):
     """ Handles contacting the EventManager and running all the subscribers
@@ -81,13 +82,12 @@ def deregisterAlert(alert):
     else:
         logging.debug("Alert tried to be deregistered before EM was initialized." )
      
-        
-    
-    
+
         
         
 """ The event manager is a singleton, this is it."""
 _theEManager_ = None
+MIN_SLEEP = 0.0
 MAX_SLEEP = 0.05  #will need testing, might need to be lower to seem instant!
 
 class EventManager():
@@ -194,7 +194,7 @@ class EventManager():
                         
             if len(self.eventqueue) != 0: continue
             # sleep for a very small amount
-            try: time.sleep(random.uniform(0.0, 0.05))
+            try: time.sleep(random.uniform(MIN_SLEEP, MAX_SLEEP))
             except: pass
         logging.debug("EventQueue watcher thread dead")    
     

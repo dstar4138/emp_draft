@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.2
+#!/usr/bin/env python3
 
 __copyright__ = """
 Copyright (c) 2010-2011 Alexander Dean (dstar@csh.rit.edu)

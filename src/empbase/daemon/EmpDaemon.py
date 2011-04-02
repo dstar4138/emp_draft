@@ -199,17 +199,22 @@ class EmpDaemon(RDaemon):
         else: raise Exception("deactivate command needs a target name or id.")
         
         
-    def __cmd_subscribe(self, *args): return notimplemented()
+    def __cmd_subscribe(self, *args):
+        if len(args) != 2: 
+            raise Exception("Subscribe command takes two arguments.")
+        
+        name, sub, defaults = parsesubs(args)
+        
     def __cmd_subscriptions(self, *args): return notimplemented()
-    def __cmd_unsubscribe(self, *args): return notimplemented()
+    def __cmd_unsubscribe(self, *args):   return notimplemented()
         
         
     def __cmd_trigger(self, *args): return notimplemented()
-    def __cmd_cvar(self, *args): return notimplemented()        
-    def __cmd_events(self, *args): return notimplemented()
-    def __cmd_alerts(self, *args): return notimplemented()
+    def __cmd_cvar(self, *args):    return notimplemented()        
+    def __cmd_events(self, *args):  return notimplemented()
+    def __cmd_alerts(self, *args):  return notimplemented()
     def __cmd_curtriggered(self, *args): return notimplemented()
-    def __cmd_attachments(self, *args): return notimplemented()
+    def __cmd_attachments(self, *args):  return notimplemented()
                 
     def __cmd_help(self, *args):
         if len(args) <= 0: #cant be less but i like being complete.

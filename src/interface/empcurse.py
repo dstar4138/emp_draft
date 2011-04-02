@@ -12,9 +12,28 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and 
 limitations under the License. 
 """
+import sys
+from curses import wrapper
+
+def interactiveModeTesting(scr):
+    pass
+    
+    
+    
+
+
+
+
+
 
 def interactiveMode():
-    #TODO: interactive mode in glorious curses! 
-    # purhaps consider urwid to make things easier: http://excess.org/urwid/
-    print("Apologies, interactive mode is not yet finished. Please try again later.")
-
+    try: import urwid
+    except:
+        print("Sorry, Interactive mode requires package 'python-urwid'.")
+        sys.exit(1)
+    
+    if sys.platform.find("linux")!=-1:
+        #wrapper(interactiveModeTesting)
+        print("I'm sorry, interactive mode isn't written yet.")
+    else:
+        print("I'm sorry, interactive mode is not available for your operating system.")

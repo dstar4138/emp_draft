@@ -381,7 +381,12 @@ class TinyCfgPrsr():
                         groups[group].update({name:self._value[key]})
                     else: groups[group] = {name:self._value[key]}
                 except: defaults[key] = self._value[key]
-        return TinyCfgPrsr(defaults), TinyCfgPrsr(groups)
+        
+        tinygroups = {}
+        for key in groups.keys():
+            tinygroups[key] = TinyCfgPrsr(groups[key])
+        
+        return TinyCfgPrsr(defaults), tinygroups
     
     def __parsekey(self, key, tag):
         lst = key.split(tag)
