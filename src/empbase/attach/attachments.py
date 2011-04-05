@@ -35,29 +35,34 @@ HIGH_IMPORTANCE = 100
 
 
 class EmpAttachment(IPlugin):
-    """ The base of all plugs and alarms for the SMTG platform. Please do not 
+    """ The base of all plugs and alarms for the EMP platform. Please do not 
     use this as your interface. Use either LoopPlug, or SignalPlug as your
-    interface for your new plug-in since SMTG separates it's internals
-    based on those.
+    interface for your new plug-in since EMP separates it's internals
+    based on those. Or if you are building a new Alarm use EmpAlarm.
     """
     def __init__(self, config):
         self.ID = ''
         self.config = config
         IPlugin.__init__(self)
         self.makeactive = self.config.getboolean("makeactive",True) 
+
+    def deactivate(self):
+        IPlugin.deactivate(self)
+        self.save()
         
     def get_commands(self):
         """ Returns a list object of the Command objs that the attachment has
-        made triggers for. This is used by SMTG to update its help screen, as
+        made triggers for. This is used by EMP to update its help screen, as
         well as the messaging router to speed up command protocols. 
         """
         raise NotImplementedError("get_commands() not implemented")
 
     def save(self):
-        """ When closing, SMTG will grab SmtgPlugin.config and push it back 
+        """ When closing, EMP will grab EmpAttachment.config and push it back 
         to the user's configuration file. So before that point it will call 
         this function so the plug-in/alerter can wrap things up and save what
-        it needs to in the self.config variable.
+        it needs to in the self.config variable. When the attachment is 
+        deactivated the save method will also be called.
         """
         self.config.set("makeactive", self.makeactive)
 
@@ -129,7 +134,8 @@ class SignalPlug(EmpPlug):
     
     def activate(self):
         """ When the SignalPlugins are activated, they throw the run function
-        into a new thread.
+        into a new thread. This makes self.is_activated equal True. Make sure
+        your run function knows when to quit (eg when is_activated == False).
         """
         if not self.is_activated:
             self.is_activated = True

@@ -167,14 +167,26 @@ class Registry():
             # Save everything to the file that we were given on startup.
             logging.debug("Saving registry to %s"%self._file)
             if self.__try_setup_path(self._file):
+                self.__makeBackup()
+                
                 tree = ET.ElementTree(root)
-                with open(self._file, "wb") as savefile: 
-                    tree.write(savefile)
+                try: 
+                # First try to save via a byte stream, if that doesn't work 
+                # utilize the basic string save. which might not work.
+                    with open(self._file, "wb") as savefile:
+                        tree.write(savefile)
+                except:
+                    with open(self._file, "w") as savefile:
+                        tree.write(savefile)
+                # if the second attempt fails it is caught by the function
+                # try-catch. Which will restore backups and log the errors.
                 logging.debug("Registry Saved!")
+                self.__removeBackup()
                 return True
             else: return False
         except Exception as e:
             logging.exception(e)
+            self.__restoreBackup()
             return False
  
     def __try_setup_path(self,path):
@@ -457,4 +469,19 @@ class Registry():
             if tmp in self._subscriptions: continue
             else: return tmp
             
-            
+    def __makeBackup(self):
+        """ Makes a temporary backup of the current registry file in case 
+        there is a problem saving to it. We definitely don't want to loose
+        all of our subscriptions!"""
+        pass #FIXME!!!
+    
+    def __removeBackup(self):
+        """ Removes the temporary backup of the current registry since we
+        saved it correctly."""
+        pass #FIXME!!
+    
+    def __restoreBackup(self):
+        """ Restore the temporary backup since we failed to save our current
+        configurations and subscriptions!! This is very bad to have happened.
+        """
+        pass #FIXME!!!

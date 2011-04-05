@@ -21,12 +21,12 @@ from empbase.event.eventhistory import EventHistory
 
 UNKNOWN = "<UNKNOWNOMGS>"
 
-def triggerEvent(eid, msg):
+def triggerEvent(eid):
     """ Handles contacting the EventManager and running all the subscribers
     quickly so the Event doesn't see any slow-down.
     """    
     if _theEManager_ is not None:
-        Thread(target=_theEManager_.triggerEvent, args=[eid, msg,]).start()
+        Thread(target=_theEManager_.triggerEvent, args=[eid,]).start()
     else: # or eid == UNKNOWN
         logging.debug("Event(%s) was triggered before EM was initialized." % eid)
 
@@ -51,9 +51,8 @@ def registerEvent(event):
     else:
         logging.debug("Event tried to be registered before EM was initialized." )
      
-
 def deregisterEvent(event):
-    """ Can be used for dynamic runtime distruction of Events. Shouldn't throw  
+    """ Can be used for dynamic runtime destruction of Events. Shouldn't throw  
     the loading into a new thread because we don't want accidental race 
     conditions. 
     """
@@ -71,9 +70,8 @@ def registerAlert(alert):
     else:
         logging.debug("Alert tried to be registered before EM was initialized." )
      
-
 def deregisterAlert(alert):
-    """ Can be used for dynamic runtime distruction of Alerts. Shouldn't throw  
+    """ Can be used for dynamic runtime destruction of Alerts. Shouldn't throw  
     the loading into a new thread because we don't want accidental race 
     conditions. 
     """

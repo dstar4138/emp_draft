@@ -97,7 +97,7 @@ class EmpConfigParser(ConfigParser):
         if type(name) is not str: 
             raise TypeError("Plugin Name must be a string")
         
-        savedir = self.get("Daemon", "save-file")
+        savedir = self.get("Daemon", "save-dir")
         attach_name="plug_"+name
         try: return TinyCfgPrsr(dict(self.items(attach_name)))
         except:

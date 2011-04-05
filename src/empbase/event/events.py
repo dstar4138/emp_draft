@@ -62,7 +62,7 @@ class Event():
             
         if self.group is not None:
             self.group.triggerCallback()
-        triggerEvent(self.ID, self.msg)
+        triggerEvent( self.ID )
         
         self.triggered = True
         self.triggering.release()
