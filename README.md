@@ -1,4 +1,4 @@
-EMP: Extenable Monitoring Platform
+EMP: Extendable Monitoring Platform
 ==========================================
 
 Short Description:
