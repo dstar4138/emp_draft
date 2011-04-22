@@ -14,11 +14,50 @@ limitations under the License.
 """
 import logging
 from subprocess import Popen
+import xml.etree.ElementTree as ET
 from empbase.event.alerts import Alert
 
-def ConstructAlert( id, cfgdata, xmldata ):
-    pass
+def ConstructAlert( id, gid, cfgdata, xmldata ):
+    gd,aid,valid = gid,'', True
+    #pull attribs from xml first to get a baseline.
+    if gid != xmldata.attrib["gid"]: valid = False
+    try: aid = xmldata.attrib["id"]
+    except: 
+        valid=False
+        logging.error("ID for alarm in ExecAlarm is missing! We have to delete the alarm.")
+        
+    #TODO: grab old vars from xml?
+    
+    path = cfgdata.get("path", '')
+    name = cfgdata.get("name", '')
+    msgasparam = cfgdata.getboolean("msgasparam", False)
+    
+    alert = ExecAlert(id,gd,path,name,mp)
+    alert.isvalid = valid
+    alert.ID = aid
+    return alert
+    
+"""
+  Certain portions of all the internal variables are saved in different locations
+to maintain as accurate information as possible.
 
+/<empsavedir>/alerts.xml
+...
+<alert gid="" id="">  <----gid is given by execalarm, id is given by EMP
+    <var name="" val="" /> <--- backups of values from cfg, could be used for comparison
+    ...
+</alert>
+...
+
+/emp.cfg
+...
+[alarm_ExecAlarm]
+progname_g1 = ''
+progpath_g1 = '' 
+msgasparam_g1 = False
+...
+
+"""
 class ExecAlert(Alert):
     def __init__(self, aid, groupid, progpath, progname, msgasparam):
         self.progname = progname
@@ -26,15 +65,21 @@ class ExecAlert(Alert):
         self.msgasparam = msgasparam
         self.groupid = groupid
         self.isvalid = True
+        self.ID = id
         
         name = "exec_"+self.groupid
         Alert.__init__(self, name, aid)
 
     def asCfgDict(self):
-        pass
+        return {"progpath":self.progpath,
+                "progname":self.progname,
+                "msgasparam":str(self.msgasparam)}
     
     def asXMLNode(self):
-        pass
+        alert = ET.Element("alert", attrib={"gid":self.groupid, "id":self.ID})
+        dct = self.asCfgDict()
+        for k in dct.keys(): ET.SubElement(alert, "var", attrib={"name":k,"val":dct[k]}) 
+        return alert
         
     def run(self, eventobj):
         logging.debug("Launching program %s", self.progname)
@@ -43,3 +88,4 @@ class ExecAlert(Alert):
         else: 
             pid = Popen([self.progpath]).pid
         logging.debug("Launched '%s', pid=%s",(self.progname, pid))
+        

@@ -37,8 +37,8 @@ from alarms.execalarm.execalert import ExecAlert, ConstructAlert
      add  - add a program, defaults to using msg as param
      rm   - remove a program
      lst  - list all programs currently being used.
-     nousemsg - turn msgasparam off
-     usemsg - turn msgasparam back on
+     nousemsg - turn msgasparam off             <------NOT IMPLEMENTED
+     usemsg - turn msgasparam back on           <------NOT IMPLEMENTED
      rename - rename a program path
  
 """
@@ -84,7 +84,7 @@ class ExecAlarm(EmpAlarm):
                 tree.write(savefile)
             self.__removeBackup()
         except:
-            logging.error("Couldn't save the alerts for "+self.ID)
+            logging.error("Couldn't save the alerts for %s", self.ID)
             self.__restoreBackup()
     
 ##############
@@ -104,19 +104,20 @@ class ExecAlarm(EmpAlarm):
             msgasparam = self.config.BOOL_CHOICES[msgasparam]
         else: msgasparam = False
         try:
-            self.__alerts.append(ExecAlert(self.ID, 
-                                       self.__generateGID(),
-                                       path, name, msgasparam))
+            alert = ExecAlert(self.ID, self.__generateGID(),
+                              path, name, msgasparam)
+            alert.register()# registers the alert with the eventmanager and registry
+            self.__alerts.append(alert)
             return "Successfully added new alert to ExecAlarm."
         except: raise #explicitly raising the same err to show where the err is from
     
     def __generateGID(self):
         """ Generates a group id for all the alerts"""
         try:ls = self.listAlarms()
-        except: return 0
+        except: return '0'
         import itertools
         for i in itertools.count(1):
-            if i not in ls: return i
+            if i not in ls: return str(i)
     
     
     def removeAlarm(self, *args):
@@ -158,7 +159,7 @@ class ExecAlarm(EmpAlarm):
         old, new, found = args[0], args[1], False
         for alert in self.__alerts:
             try:
-                if alert.progname == old or alert.groupid == int(old):
+                if alert.progname == old or alert.groupid == old:
                     alert.progname = new
                     found = True; break
             except:continue; 
@@ -174,7 +175,7 @@ class ExecAlarm(EmpAlarm):
         
         _, groups = self.config.getgroups()
         for g in groups.keys():
-            self.__alerts.append(ConstructAlert(self.ID,
+            self.__alerts.append(ConstructAlert(self.ID, g,
                                                 groups[g],
                                                 self.__XMLFor(g)))
         # Make sure all the alerts are valid
