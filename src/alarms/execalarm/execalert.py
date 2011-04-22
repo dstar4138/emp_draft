@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License. 
 """
 import logging
+from subprocess import Popen
 from empbase.event.alerts import Alert
 
 class ExecAlert(Alert):
@@ -45,5 +46,7 @@ class ExecAlert(Alert):
         
     def run(self, eventobj):
         if self.msgasparam:
-            pass #TODO: run the program
-        else: pass
+            pid = Popen([self.progpath, eventobj.msg ]).pid
+        else: 
+            pid = Popen([self.progpath]).pid
+        logging.debug("Launched '%s', pid=%s",(self.progname, pid))

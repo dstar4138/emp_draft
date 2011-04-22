@@ -11,15 +11,16 @@ Description = This alarm executes a program when it gets an alert.
 #
 [Core]
 Name = Execution Alarm
-Module = execalarm
+Module = ExecAlarm
 Cmd = execman
+load = False
 
 
 [Defaults]
 ## The following are an example of what variables get uploaded to your
 ## config file whenever you make a new alarm with execalerter
 ##
-# progname_#
-# progpath_#
-# msgasparam_#
+# progname_$
+# progpath_$
+# msgasparam_$
 #

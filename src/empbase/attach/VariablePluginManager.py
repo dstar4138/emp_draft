@@ -135,13 +135,13 @@ class DefaultPluginManager(PluginManager):
                         self.config.defaultAttachmentVars(plugin_info.plugname, plugin_info.defaults, current_category)
                         attachmentVars = self.config.getAttachmentVars(plugin_info.plugname)
                         
-                        # check that the plugin is actually wanting to be loaded.
-                        if attachmentVars.getboolean("load", True):
+                        # check that the plug-in is actually wanting to be loaded.
+                        if plugin_info.load:
                             try:
                                 plugin_info.plugin_object = element(attachmentVars)
                                 plugin_info.category = current_category
                                 
-                                #now we will register the plugin with the router
+                                #now we will register the plug-in with the router
                                 self.registry.register( plugin_info.plugname,
                                                         plugin_info.module,  
                                                         plugin_info.plugin_object )
@@ -153,6 +153,7 @@ class DefaultPluginManager(PluginManager):
                                 if attachmentVars.getboolean("require", False):#killme!!
                                     logging.exception(e)
                                     sys.exit(1)
+                        else: logging.debug("Ignoring attachment %s, since load value is false.", plugin_info.module)
                     break
 
         # Remove candidates list since we don't need them any more and
@@ -182,6 +183,7 @@ class DefaultPluginManager(PluginManager):
                 plugin_info.plugname = config_parser.get("Core","Cmd")
             if config_parser.has_option("Core","load"):
                 plugin_info.load = config_parser.getboolean("Core","load")
+            else: plugin_info.load = True
             if config_parser.has_option("Core","Module"):
                 plugin_info.module = config_parser.get("Core","Module")
         
