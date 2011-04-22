@@ -16,6 +16,7 @@ import os
 import logging
 import xml.etree.ElementTree as ET
 
+from empbase.comm.command import Command
 from empbase.attach.attachments import EmpAlarm
 from alarms.execalarm.execalert import ExecAlert    
     
@@ -35,6 +36,7 @@ from alarms.execalarm.execalert import ExecAlert
  Commands that might be good:
      add  - add a program, defaults to using msg as param
      rm   - remove a program
+     lst  - list all programs currently being used.
      nousemsg - turn msgasparam off
      usemsg - turn msgasparam back on
  
@@ -48,26 +50,57 @@ class ExecAlarm(EmpAlarm):
         self.__savedir = ""
         self.__alerts  = []
         self.__root    = None 
-        
-    def get_alerts(self):
-        return self.__alerts   
-        
-    def get_commands(self):
-        return []       
+        self.__commands = [Command("add",trigger=self.addAlarm,   help="Adds a program to be turned into an alarm."),
+                           Command("rm", trigger=self.removeAlarm,help="Removes a program that ExecAlerter uses."),
+                           Command("lst",trigger=self.listAlarms, help="Lists all the programs ExecAlerter has avaliable.")]
       
-        
+###########
+# Attachment API functions.
+###########
+    def get_alerts(self): return self.__alerts   
+    def get_commands(self): return self.__commands
+              
     def activate(self):
         """ Grab all setups and configurations from saves and caches."""
         EmpAlarm.activate(self)
-        self.__load()
-        self.__setup()
+        self.__load() # load all internal variables via saved config files
+        self.__setup() # setup all the alarms based on internal vars
         
     def deactivate(self):
         """ We need to reset all of our variables when they get back."""
         EmpAlarm.deactivate(self)
         self.__alerts = []
         self.__root   = None
-        
+            
+    def save(self):
+        """ Save all internal variables as xml file in Attachment's cache. """
+        EmpAlarm.save(self)
+        try:
+            tree = ET.ElementTree(self.__root)
+            self.__makeBackup()
+            with open(self.__savedir+"alarms.xml", "w") as savefile:
+                tree.write(savefile)
+            self.__removeBackup()
+        except:
+            logging.error("Couldn't save the alerts for "+self.ID)
+            self.__restoreBackup()
+    
+##############
+# ExecAlerter's command functions.
+##############    
+    def addAlarm(*args):
+        pass
+    
+    def removeAlarm(*args):
+        pass
+    
+    def listAlarms(*args):
+        pass
+            
+            
+###########
+# Internal Utility functions.
+###########      
     def __setup(self):
         """Loads all the alerts into memory."""
         if self.__root is None: return
@@ -78,50 +111,53 @@ class ExecAlarm(EmpAlarm):
                                            groups[g],
                                            self.__XMLFor(g)))
         # Make sure all the alerts are valid
-        self.__alerts = [a for a in self.__alerts if a.isStillValid()]
+        self.__alerts = [a for a in self.__alarms if a.isStillValid()]
         # after setting up we dont need the xml anymore.
         self.__root = None
-        
-    def save(self):
-        EmpAlarm.save(self)
-        try:
-            tree = ET.ElementTree(self.__root)
-            self.__makeBackup()
-            with open(self.__savedir+"alerts.xml", "w") as savefile:
-                tree.write(savefile)
-            self.__removeBackup()
-        except:
-            logging.error("Couldn't save the alerts for "+self.ID)
-            self.__restoreBackup()
-        
             
     def __XMLFor(self, groupid):
+        """Grabs the XML node for an alarm so that it can be created 
+        upon activation. 
+        """
         if self.__root is None: return None
-        for alert in self.__root.getchildren():
-            if "group" in alert.attrib and  \
-               groupid == alert.attrib["group"]:
-                return alert
+        for alarm in self.__root.getchildren():
+            if "group" in alarm.attrib and  \
+               groupid == alarm.attrib["group"]:
+                return alarm
         return None
     
     def __load(self):
-        """ Load the xml file of alert data into memory. """
+        """ Load the xml file of the alarms data into memory. """
         self.__savedir = self.config.getMyEmpSaveDir(self.ID)
-        path = self.__savedir+"alerts.xml"
+        path = self.__savedir+"alarms.xml"
         if self.__try_setup_path(path):
             tree = ET.parse(path)
             self.__root = tree.getroot()
         else:pass
-     
-     
+
+#############   
+# File IO for backing up and saving.
+#############
     def __makeBackup(self):
-        pass
+        try:
+            import shutil
+            src = self.__savedir+"alarms.xml"
+            dst = self.__savedir+"alarms_backup.xml"
+            shutil.copy(src, dst)
+        except: logging.error("ExectAlerter failed at making a backup.")
      
     def __restoreBackup(self):
-        pass
-     
+        import shutil
+        src = self.__savedir+"alarms.xml"
+        dst = self.__savedir+"alarms_backup.xml"
+        if os.path.exists(dst):
+            shutil.copy(dst, src)
+            self.__removeBackup()
+        else: logging.error("ExecAlerter tried to restore a non-existent backup.")
+        
     def __removeBackup(self):
-        pass
-     
+        try: os.remove(self.__savedir+"alarms_backup.xml")
+        except: logging.warning("ExectAlerter failed at removing its backup file.")
             
     def __try_setup_path(self,path):
         if os.path.exists(path):

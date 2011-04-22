@@ -17,10 +17,15 @@ limitations under the License.
 
 __usage__ = "usage: %prog {option} [configfile]"
 __description__ = """ 
-The empd program is a small example interface for interacting with 
-just the daemon. Any actual useful functionality is in emp instead.
-Please use empd only for your startup scripts to get the daemon up 
-and running, and then shutting it down.  
+The empd program is a small interface for interacting with the 
+daemon. Any other functionality is in em instead. Please use empd 
+only for your startup scripts to get the daemon up and running, and
+then shutting it down.
+
+FYI: The difference between the 'startup' and the 'start' options is
+that 'startup' checks the user's config file before starting emp to
+check if boot-launch has been disabled. This allows the user to
+customize whether it starts or not.  
 """
 
 import sys,logging

@@ -1,0 +1,25 @@
+[Documentation]
+Author = Alexander Dean
+Version = 0.1
+Website = dstar4138.com
+Copyright = Apache v2
+Description = This alarm executes a program when it gets an alert.
+
+#
+# DONT CHANGE ANYTHING IN CORE! That is unless you need the cmd name to 
+# be something other than 'execman'.
+#
+[Core]
+Name = Execution Alarm
+Module = execalarm
+Cmd = execman
+
+
+[Defaults]
+## The following are an example of what variables get uploaded to your
+## config file whenever you make a new alarm with execalerter
+##
+# progname_#
+# progpath_#
+# msgasparam_#
+#
