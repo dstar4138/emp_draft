@@ -18,7 +18,7 @@ import xml.etree.ElementTree as ET
 
 from empbase.comm.command import Command
 from empbase.attach.attachments import EmpAlarm
-from alarms.execalarm.execalert import ExecAlert    
+from alarms.execalarm.execalert import ExecAlert, ConstructAlert  
     
 
 """
@@ -39,6 +39,7 @@ from alarms.execalarm.execalert import ExecAlert
      lst  - list all programs currently being used.
      nousemsg - turn msgasparam off
      usemsg - turn msgasparam back on
+     rename - rename a program path
  
 """
 class ExecAlarm(EmpAlarm):
@@ -51,8 +52,9 @@ class ExecAlarm(EmpAlarm):
         self.__alerts  = []
         self.__root    = None 
         self.__commands = [Command("add",trigger=self.addAlarm,   help="Adds a program to be turned into an alarm."),
-                           Command("rm", trigger=self.removeAlarm,help="Removes a program that ExecAlerter uses."),
-                           Command("lst",trigger=self.listAlarms, help="Lists all the programs ExecAlerter has avaliable.")]
+                           Command("rm", trigger=self.removeAlarm,help="Removes a program that ExecAlarm uses."),
+                           Command("lst",trigger=self.listAlarms, help="Lists all the programs ExecAlarm has available."),
+                           Command("rename",trigger=self.renameAlarm, help="Rename the name that ExecAlarm uses.")]
       
 ###########
 # Attachment API functions.
@@ -88,35 +90,100 @@ class ExecAlarm(EmpAlarm):
 ##############
 # ExecAlerter's command functions.
 ##############    
-    def addAlarm(*args):
-        pass
+    def addAlarm(self, *args):
+        if len(args) == 0:
+            raise Exception("Command 'add' needs a full program path to add an alert.")
+        path, name, msgasparam = args[0], "", ""
+        if not os.path.exists(path):
+            raise Exception("Path to program does not exist: %s", path)
+        if len(args) > 1:
+            name = args[1]
+            if len(args) > 2: msgasparam = args[2]
+        else: name = os.path.basename(path)
+        if msgasparam in self.config.BOOL_CHOICES:
+            msgasparam = self.config.BOOL_CHOICES[msgasparam]
+        else: msgasparam = False
+        try:
+            self.__alerts.append(ExecAlert(self.ID, 
+                                       self.__generateGID(),
+                                       path, name, msgasparam))
+            return "Successfully added new alert to ExecAlarm."
+        except: raise #explicitly raising the same err to show where the err is from
     
-    def removeAlarm(*args):
-        pass
+    def __generateGID(self):
+        """ Generates a group id for all the alerts"""
+        try:ls = self.listAlarms()
+        except: return 0
+        import itertools
+        for i in itertools.count(1):
+            if i not in ls: return i
     
-    def listAlarms(*args):
-        pass
+    
+    def removeAlarm(self, *args):
+        """ Removal command, facilitates alert removal while EMP is running
+        and ExecAlarm is attached.
+        """
+        if len(args) == 0:
+            raise Exception(
+                "Command 'rm' needs a id or the program name to remove.")
+        removed = False
+        for alert in self.__alerts:
+            if args[0] == alert.groupid or \
+               args[0] == alert.progname:
+                self.__alerts.remove( alert )
+                removed = True
+        if not removed:
+            raise Exception(
+               "Could not remove program, are you sure you have the right id? "
+               +"Try using the 'lst' command.")
+        else: return "Removal was a success."
+    
+    def listAlarms(self, *args):
+        """ Lists all the alarms with their ID or name. """
+        ret = {}
+        type, types = 'id', ['id','names']
+        if len(args)>0 and args[0] in types: type = args[0]
+        for alert in self.__alerts:
+            if type=='names':
+                ret[alert.progname] = alert.progpath
+            else:ret[alert.groupid] = alert.progpath
+        if len(ret) == 0:
+            raise Exception("There are no alerts!")
+        return ret
             
+            
+    def renameAlarm(self, *args):
+        if len(args) < 2:
+            raise Exception("Command 'rename' needs either an ID or an old name, and then a new name.")
+        old, new, found = args[0], args[1], False
+        for alert in self.__alerts:
+            try:
+                if alert.progname == old or alert.groupid == int(old):
+                    alert.progname = new
+                    found = True; break
+            except:continue; 
+        if found: return "Successfully renamed."
+        else: raise Exception("Couldn't find program to rename. Use 'lst' command.")
             
 ###########
 # Internal Utility functions.
 ###########      
     def __setup(self):
-        """Loads all the alerts into memory."""
+        """ Loads all the alerts into memory. Must be called after __load. """
         if self.__root is None: return
         
         _, groups = self.config.getgroups()
         for g in groups.keys():
-            self.__alerts.append(ExecAlert(self.ID,
-                                           groups[g],
-                                           self.__XMLFor(g)))
+            self.__alerts.append(ConstructAlert(self.ID,
+                                                groups[g],
+                                                self.__XMLFor(g)))
         # Make sure all the alerts are valid
-        self.__alerts = [a for a in self.__alarms if a.isStillValid()]
+        self.__alerts = [a for a in self.__alerts if a.isvalid]
         # after setting up we dont need the xml anymore.
         self.__root = None
             
     def __XMLFor(self, groupid):
-        """Grabs the XML node for an alarm so that it can be created 
+        """ Grabs the XML node for an alarm so that it can be created 
         upon activation. 
         """
         if self.__root is None: return None
@@ -170,7 +237,3 @@ class ExecAlarm(EmpAlarm):
             except: 
                 return False
             return True    
-        
-        
-        
-        

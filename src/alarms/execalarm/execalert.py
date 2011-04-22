@@ -16,35 +16,28 @@ import logging
 from subprocess import Popen
 from empbase.event.alerts import Alert
 
+def ConstructAlert( id, cfgdata, xmldata ):
+    pass
+
 class ExecAlert(Alert):
-    def __init__(self, aid, cfg, xml):
-        #TODO: set these based on cfg
-        self.progname = ''
-        self.progpath = ''
-        self.msgasparam = False
-        self.groupid = None
-        self.__valid = True
-        #LOAD THE CFG AND XML
-        self.__load(cfg, xml)
+    def __init__(self, aid, groupid, progpath, progname, msgasparam):
+        self.progname = progname
+        self.progpath = progpath
+        self.msgasparam = msgasparam
+        self.groupid = groupid
+        self.isvalid = True
         
         name = "exec_"+self.groupid
         Alert.__init__(self, name, aid)
-        
-    def __load(self, cfg, xml):
-        pass
-        
-        
 
     def asCfgDict(self):
         pass
     
     def asXMLNode(self):
         pass
-    
-    def isStillValid(self):
-        return self.__valid
         
     def run(self, eventobj):
+        logging.debug("Launching program %s", self.progname)
         if self.msgasparam:
             pid = Popen([self.progpath, eventobj.msg ]).pid
         else: 

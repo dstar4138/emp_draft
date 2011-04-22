@@ -282,15 +282,16 @@ class EmpConfigParser(ConfigParser):
 
 
 
-BOOL_CHOICES = {"0":False,"1":True,"no":False,"yes":True,"true":True,
-                "false":False,"on":True,"off":False, "":False}
-
 class TinyCfgPrsr():
     """ A Utility class to make handling configuration variables easier for
     attachment construction. They mimic the functionality of a standard 
     config parser, but minus a lot of un-needed functions and variables. It
     also just holds one section as a dictionary.
     """
+    
+    BOOL_CHOICES = {"0":False,"1":True,"no":False,"yes":True,"true":True,
+                "false":False,"on":True,"off":False, "":False}
+    
     def __init__(self, dictionary, savedir=""):
         self._savedir = savedir
         self._value = dictionary
@@ -348,8 +349,8 @@ class TinyCfgPrsr():
         """
         if key in self._value:
             res=self._value[key].lower()
-            if res in BOOL_CHOICES:
-                return BOOL_CHOICES[res]
+            if res in TinyCfgParser.BOOL_CHOICES:
+                return TinyCfgParser.BOOL_CHOICES[res]
             else: return False
         else: return default
     

@@ -1,6 +1,35 @@
 
 Intro:
   I included this file so that those that learn better from example can get a 
-little bit of background information on how this attachment was made
+little bit of background information on how this attachment was made. Its here
+to give a much more in-depth look at the design of ExecAlarm.
 
+  First off, ExecAlarm is the least complicated Alarm attachment EMP has. This
+means that any other functionality that you would require could be build off
+the platform ExecAlarm is based on.
+
+Design:
+
+  Alarms have two parts, the attachment and the alert. The attachment is what 
+is attached to EMP upon startup and runs all commands. The alert is what 
+handles the response to the event caused elsewhere within EMP. 
+
+  Attachments are what spawn alarms, a good way of thinking about it is the 
+following:
+	'Alarms have different methods of alerting based on they type of event.'
+This means that a single attachment could have anywhere from 1 to 100 different
+ways of alerting. However most of these ways are utilizing a single method. Thats
+where the different types of alarms comes into play.
+
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
 #TODO:
+ 

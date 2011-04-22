@@ -1,0 +1,100 @@
+Execution Alarm
+
+
+Description:
+Execution Alarm is an easy way to facilitate easy alarm creation within the EMP
+framework. This is so that even those with little to no programming experience
+can create their own alarms.
+
+The way it works is ExecAlarm holds a list of programs that you would like to
+run whenever a given event happens that EMP is listening to. Here is an 
+example:
+
+Say I would like to have Thunderbird start up when EMP realizes I just got an
+email at one of my accounts. First I set up ExecAlarm to recognize where 
+thunderbird is on my computer:
+
+		./emp.py --target=execman add /usr/bin/thunderbird emailcli
+
+This command will ask ExecAlarm to add a new alarm called 'emailcli' that will
+run the thunderbird program when it gets fired. Then all you have to do is make
+emailcli subscribe to your email watching plug, here's what I type in:
+
+		./emp.py subscribe execman.emailcli email
+		
+Since 'email' is the command name of my email watching plug, emp takes care of
+the rest and everything just works. Now whenever I get an email emp will launch
+thunderbird for me! 
+
+
+Commands:
+ExecAlarm is fairly simple and only has a couple of commands, heres what they
+are along with a couple examples:
+
+
+add		This adds a program to ExecAlarm. There are three forms to this command
+		although it may evolve a bit more in the future.
+		
+				add progpath [progname [msg-as-param]]
+			
+		As you can see the last two parameters are optional, you can name the
+		new program in ExecAlarm something different as in the example above.
+		If this parameter is absent, ExecAlarm will call it whatever the 
+		program's name is. (ie /usr/bin/thunderbird is going to be thunderbird)
+		
+		The last parameter defines whether or not the message that got sent
+		to the alarm should be passed to the program as a command line parameter.
+		For example if you wrote a script that saves stuff in a file:
+			
+				add ~/.scripts/logger.py logme true
+				
+		Whenever an event then gets triggered, ExecAlarm will pass its value 
+		into your new script.
+		
+		
+lst     Lists all the programs in the ExecAlarm's internal mapping. It will 
+		spit out a dictionary of ID to program path. This ID is what you can
+		use to reference the program when you want to remove it. Example of
+		output is:
+		
+		  		{0:'/usr/bin/thunderbird',
+		  		 1:'/home/dstar4138/.scripts/logger.py'}
+		 
+		if instead of the ID's you want the program names that ExecAlarm uses,
+		use the names flag, ie:
+		
+				lst names
+				
+		This will give you the output:
+		
+  		  		{'emailcli':'/usr/bin/thunderbird',
+  		   		 'logme':'/home/dstar4138/.scripts/logger.py'}
+  		   		 
+  		The explicit definition of the lst command is as follows:
+  		
+  				lst [names | ids]
+		
+		
+		
+rm      This removes a program from the ExecAlarm internal mapping and removes
+		all subscriptions that the program may have. To remove you need to give
+		the ID given by the lst command or a program name. ie:
+		
+			rm 0 
+			rm emailcli
+			
+		will both remove the first program path from the list of programs.
+		
+
+rename  This renames a program path that is held in the ExecAlarm while 
+		maintaining the subscriptions it has.
+		
+			rename 0 thunderbird
+			rename emailcli thunderbird		
+			
+		The two previous commands do the same thing, given an ID or an old name
+		and then a new name, the old name is replaced with the new one. 
+
+
+
+
