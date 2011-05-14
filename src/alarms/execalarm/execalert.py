@@ -28,9 +28,9 @@ def ConstructAlert( id, gid, cfgdata, xmldata ):
         
     #TODO: grab old vars from xml?
     
-    path = cfgdata.get("path", '')
-    name = cfgdata.get("name", '')
-    msgasparam = cfgdata.getboolean("msgasparam", False)
+    path = cfgdata.get("progpath", '')
+    name = cfgdata.get("progname", '')
+    mp   = cfgdata.getboolean("msgasparam", False)
     
     alert = ExecAlert(id,gd,path,name,mp)
     alert.isvalid = valid
@@ -65,7 +65,7 @@ class ExecAlert(Alert):
         self.msgasparam = msgasparam
         self.groupid = groupid
         self.isvalid = True
-        self.ID = id
+        self.ID = ""
         
         name = "exec_"+self.groupid
         Alert.__init__(self, name, aid)
@@ -82,10 +82,10 @@ class ExecAlert(Alert):
         return alert
         
     def run(self, eventobj):
-        logging.debug("Launching program %s", self.progname)
+        logging.debug("Launching program %s"% self.progname)
         if self.msgasparam:
             pid = Popen([self.progpath, eventobj.msg ]).pid
         else: 
             pid = Popen([self.progpath]).pid
-        logging.debug("Launched '%s', pid=%s",(self.progname, pid))
+        logging.debug("Launched '%s', pid=%s"%(self.progname, pid))
         

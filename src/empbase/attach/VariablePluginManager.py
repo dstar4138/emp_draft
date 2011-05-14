@@ -132,8 +132,8 @@ class DefaultPluginManager(PluginManager):
                 if current_category is not None:
                     if not (candidate_infofile in self._category_file_mapping[current_category]): 
                         # we found a new plugin: initialise it and search for the next one
-                        self.config.defaultAttachmentVars(plugin_info.plugname, plugin_info.defaults, current_category)
-                        attachmentVars = self.config.getAttachmentVars(plugin_info.plugname)
+                        self.config.defaultAttachmentVars(plugin_info.module, plugin_info.defaults, current_category)
+                        attachmentVars = self.config.getAttachmentVars(plugin_info.module)
                         
                         # check that the plug-in is actually wanting to be loaded.
                         if plugin_info.load:
@@ -149,7 +149,9 @@ class DefaultPluginManager(PluginManager):
                                 self.category_mapping[current_category].append(plugin_info)
                                 self._category_file_mapping[current_category].append(candidate_infofile)
                                 current_category = None
+                                logging.debug("Loaded attachment: %s", plugin_info.module)
                             except Exception as e:
+                                logging.exception(e)
                                 if attachmentVars.getboolean("require", False):#killme!!
                                     logging.exception(e)
                                     sys.exit(1)

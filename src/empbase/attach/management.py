@@ -50,11 +50,12 @@ class AttachmentManager(VariablePluginManager):
                     if isinstance(attach.plugin_object, EmpPlug):
                         logging.debug("should have loaded events for: %s"%attach.name)
                         self.eman.loadEvents(attach.plugin_object.get_events())
-                    else: #EmpAlarm
+                    elif isinstance(attach.plugin_object, EmpAlarm):
                         self.eman.loadAlerts(attach.plugin_object.get_alerts())
+                    else: continue; #ignore it, how did it get here?
                     attach.plugin_object.activate()
                 except Exception as e:
-                    logging.error(e)
+                    logging.exception(e)
                 
     def getLoopPlugs(self):
         """ Get all the loop plug-ins that are loaded. This is used in the pull

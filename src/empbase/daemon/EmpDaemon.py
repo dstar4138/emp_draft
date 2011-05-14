@@ -225,10 +225,14 @@ class EmpDaemon(RDaemon):
                 cmds = CommandList(self.get_commands())
                 all = {"Daemon":cmds.getHelpDict()}
                 try:
+                    logging.debug("trying to get other commands.")
+                    alist = self.aman.getAllPlugins()
+                    logging.debug("got %d attachments",len(alist))
                     for attach in self.aman.getAllPlugins():
+                        logging.debug("getting commands from plug: %s", attach.plugin_object.module)
                         cmds = CommandList(attach.plugin_object.get_commands())
                         all[attach.name] = cmds.getHelpDict()
-                except:pass
+                except Exception as e:logging.exception(e)
                 return all
             else: # its a plug or an alert id.
                 if args[0] == "daemon":

@@ -131,13 +131,13 @@ class EventManager():
         
             
     def loadAlert(self, alert):
-        lid = self.registry.loadEvent(alert.name, alert.aid)
+        lid = self.registry.loadAlert(alert.name, alert.aid)
         alert.ID = lid
         self.alertmap[lid] = alert
             
     def loadAlerts(self, alertlist):
         for alert in alertlist:
-            lid = self.registry.loadEvent(alert.name, alert.aid)
+            lid = self.registry.loadAlert(alert.name, alert.aid)
             alert.ID = lid
             self.alertmap[lid] = alert
     

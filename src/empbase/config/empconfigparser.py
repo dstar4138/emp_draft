@@ -89,19 +89,19 @@ class EmpConfigParser(ConfigParser):
                 return False
             return True
                       
-    def getAttachmentVars(self, name):
+    def getAttachmentVars(self, module):
         """Returns a TinyCfgPrsr of the attachment's variables that were in 
         saved to smtg's config file. TinyCfgPrsr provides some utility functions
         for retrieving the types of variable that were stored there.
         """
-        if type(name) is not str: 
+        if type(module) is not str: 
             raise TypeError("Plugin Name must be a string")
         
         savedir = self.get("Daemon", "save-dir")
-        attach_name="plug_"+name
+        attach_name="plug_"+module
         try: return TinyCfgPrsr(dict(self.items(attach_name)))
         except:
-            attach_name="alarm_"+name
+            attach_name="alarm_"+module
             try: return TinyCfgPrsr(dict(self.items(attach_name)),savedir)
             except: return TinyCfgPrsr({},savedir)
         
@@ -114,11 +114,11 @@ class EmpConfigParser(ConfigParser):
         """ The registry file to be read in by the Registry object. """
         return self.get("Daemon","registry-file")
     
-    def defaultAttachmentVars(self, name, defaults, category):
+    def defaultAttachmentVars(self, module, defaults, category):
         """Called by SmtgPluginManager and SmtgAlertManager to load the default
         configurations into the database for use later.
         """
-        section = CATEGORY_MAP[category]+name
+        section = CATEGORY_MAP[category]+module
         if not self.has_section(section):
             self.add_section(section)
 
@@ -145,10 +145,10 @@ class EmpConfigParser(ConfigParser):
                     
                     if isinstance(attach.plugin_object, EmpAlarm):
                         for key in attach.plugin_object.config.keys():
-                            self.set("alarm_"+attach.plugname, str(key), str(attach.plugin_object.config[key]))
+                            self.set("alarm_"+attach.module, str(key), str(attach.plugin_object.config[key]))
                     else:
                         for key in attach.plugin_object.config.keys():
-                            self.set("plug_"+attach.plugname,key,str(attach.plugin_object.config[key]))
+                            self.set("plug_"+attach.module,key,str(attach.plugin_object.config[key]))
                         #else, it doesn't matter 
                 except Exception as e: 
                     logging.exception(e)
@@ -156,8 +156,12 @@ class EmpConfigParser(ConfigParser):
             # make sure it exists and can be written to.
             logging.debug("Trying to save cfg to: %s"%SAVE_CFG_FILE)
             if self.__try_setup_path(SAVE_CFG_FILE):
-                with open(SAVE_CFG_FILE, mode="r+") as fp:
-                    self.update_myfile(fp)
+                fp=None
+                try: fp = open(SAVE_CFG_FILE, mode="r+")
+                except:# new file 
+                    fp = open(SAVE_CFG_FILE, mode="w+")
+                    fp.write("#\n# EMP CONFIGS\n#")
+                self.update_myfile(fp)
                 logging.debug("Saved to cfg file!")
             else:
                 logging.error("Couldn't write to cfg file, it cant be created.")
@@ -261,7 +265,7 @@ class EmpConfigParser(ConfigParser):
                     output = current
                     #only write the non default section headers.
                     if sect is not DEFAULTSECT:
-                        output.write("[%s]\n" % (sect,))
+                        output.write("\n[%s]\n" % (sect,))
                     sections[sect] = None
                 for opt in opts:
                     if opt != "__name__" and not (sect, opt) in written:
@@ -349,8 +353,8 @@ class TinyCfgPrsr():
         """
         if key in self._value:
             res=self._value[key].lower()
-            if res in TinyCfgParser.BOOL_CHOICES:
-                return TinyCfgParser.BOOL_CHOICES[res]
+            if res in TinyCfgPrsr.BOOL_CHOICES:
+                return TinyCfgPrsr.BOOL_CHOICES[res]
             else: return False
         else: return default
     

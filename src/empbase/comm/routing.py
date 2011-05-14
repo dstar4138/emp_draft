@@ -87,7 +87,7 @@ class MessageRouter():
             if msg.getType() == COMMAND_MSG_TYPE:
                 found = False
                 for cmd in base.get_commands():
-                    logging.debug("comparing: %s ?= %s"%(cmd,msg.getValue()))
+                    #logging.debug("comparing: %s ?= %s"%(cmd,msg.getValue()))
                     if cmd == msg.getValue():
                         found = True 
                         Thread(target=self._cmdrun, args=msg.get("args"),

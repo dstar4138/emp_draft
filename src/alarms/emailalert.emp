@@ -13,6 +13,7 @@ Description = This alarm uses an SMTP server to send you an email when you get a
 Name = Email Alerter
 Module = EmailAlerter
 Cmd = emailalerter
+load = False
 
 # Here are the default variables which are user configurable that will show up
 # in your cfg file. Don't change the variables here, since they will not get 

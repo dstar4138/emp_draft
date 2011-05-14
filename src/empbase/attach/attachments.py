@@ -92,7 +92,7 @@ class EmpAlarm(EmpAttachment):
     
     def get_alerts(self):
         """ Gets the possible alerts with this Alarm!"""
-        raise NotImplementedError("alert() not implemented")
+        raise NotImplementedError("get_alerts() not implemented")
     
 
 class LoopPlug(EmpPlug):

@@ -59,13 +59,18 @@ class ExecAlarm(EmpAlarm):
 ###########
 # Attachment API functions.
 ###########
-    def get_alerts(self): return self.__alerts   
-    def get_commands(self): return self.__commands
+    def get_alerts(self): 
+        return self.__alerts
+       
+    def get_commands(self): 
+        return self.__commands
               
     def activate(self):
         """ Grab all setups and configurations from saves and caches."""
         EmpAlarm.activate(self)
+        logging.debug("Activating the ExecAlarm, now loading")
         self.__load() # load all internal variables via saved config files
+        logging.debug("Setting up execalarm internals")
         self.__setup() # setup all the alarms based on internal vars
         
     def deactivate(self):
@@ -78,13 +83,20 @@ class ExecAlarm(EmpAlarm):
         """ Save all internal variables as xml file in Attachment's cache. """
         EmpAlarm.save(self)
         try:
+            
+            if self.__root is None:
+                self.__root = ET.Element("alerts")
+                for alert in self.__alerts:
+                    self.config.setgroup(alert.asCfgDict(), alert.groupid)
+                    self.__root.append(alert.asXMLNode())
+            else: logging.error("tried to save, but root wasn't null")
             tree = ET.ElementTree(self.__root)
             self.__makeBackup()
-            with open(self.__savedir+"alarms.xml", "w") as savefile:
+            with open(self.__savedir+"alarms.xml", "wb") as savefile:
                 tree.write(savefile)
             self.__removeBackup()
-        except:
-            logging.error("Couldn't save the alerts for %s", self.ID)
+        except Exception as e:
+            logging.error("Couldn't save the alerts for %s: %s" % (self.ID, e))
             self.__restoreBackup()
     
 ##############
@@ -95,7 +107,7 @@ class ExecAlarm(EmpAlarm):
             raise Exception("Command 'add' needs a full program path to add an alert.")
         path, name, msgasparam = args[0], "", ""
         if not os.path.exists(path):
-            raise Exception("Path to program does not exist: %s", path)
+            raise Exception("Path to program does not exist: %s"% path)
         if len(args) > 1:
             name = args[1]
             if len(args) > 2: msgasparam = args[2]
@@ -117,7 +129,7 @@ class ExecAlarm(EmpAlarm):
         except: return '0'
         import itertools
         for i in itertools.count(1):
-            if i not in ls: return str(i)
+            if str(i) not in ls: return str(i)
     
     
     def removeAlarm(self, *args):
@@ -131,6 +143,7 @@ class ExecAlarm(EmpAlarm):
         for alert in self.__alerts:
             if args[0] == alert.groupid or \
                args[0] == alert.progname:
+                alert.deregister()
                 self.__alerts.remove( alert )
                 removed = True
         if not removed:
@@ -142,11 +155,13 @@ class ExecAlarm(EmpAlarm):
     def listAlarms(self, *args):
         """ Lists all the alarms with their ID or name. """
         ret = {}
-        type, types = 'id', ['id','names']
+        type, types = 'id', ['id','names','aid']
         if len(args)>0 and args[0] in types: type = args[0]
         for alert in self.__alerts:
             if type=='names':
                 ret[alert.progname] = alert.progpath
+            elif type=='aid':
+                ret[alert.ID] = alert.progpath
             else:ret[alert.groupid] = alert.progpath
         if len(ret) == 0:
             raise Exception("There are no alerts!")
@@ -171,10 +186,14 @@ class ExecAlarm(EmpAlarm):
 ###########      
     def __setup(self):
         """ Loads all the alerts into memory. Must be called after __load. """
-        if self.__root is None: return
-        
+        if self.__root is None: 
+            logging.warning("Execalarm couldn't find previous load information, assuming first time.")
+            return
+        logging.debug("setting everything up")
         _, groups = self.config.getgroups()
+        logging.debug("grabbing groups")
         for g in groups.keys():
+            logging.debug("grabbing key: %s"%g)
             self.__alerts.append(ConstructAlert(self.ID, g,
                                                 groups[g],
                                                 self.__XMLFor(g)))
@@ -189,30 +208,38 @@ class ExecAlarm(EmpAlarm):
         """
         if self.__root is None: return None
         for alarm in self.__root.getchildren():
-            if "group" in alarm.attrib and  \
-               groupid == alarm.attrib["group"]:
-                return alarm
+            if "gid" in alarm.attrib and  \
+               groupid == alarm.attrib["gid"]:
+               return alarm
         return None
     
     def __load(self):
         """ Load the xml file of the alarms data into memory. """
-        self.__savedir = self.config.getMyEmpSaveDir(self.ID)
-        path = self.__savedir+"alarms.xml"
-        if self.__try_setup_path(path):
-            tree = ET.parse(path)
-            self.__root = tree.getroot()
-        else:pass
-
+        try:
+            self.__savedir = self.config.getMyEmpSaveDir(self.ID)
+            path = self.__savedir+"alarms.xml"
+            if self.__try_setup_path(path):
+                logging.debug("loading old alarms setup")
+                tree = ET.parse(path)
+                logging.debug("parsed into tree")
+                self.__root = tree.getroot()
+                logging.debug("saved root internally")
+            else:
+                logging.error("Failed to set up save directory for ExecAlarm.")
+        except: pass
 #############   
 # File IO for backing up and saving.
 #############
     def __makeBackup(self):
         try:
-            import shutil
             src = self.__savedir+"alarms.xml"
             dst = self.__savedir+"alarms_backup.xml"
-            shutil.copy(src, dst)
-        except: logging.error("ExectAlerter failed at making a backup.")
+            if os.path.exists(src):
+                import shutil
+                shutil.copy(src, dst)
+            else: logging.warning("First time loading ExecAlarm? Couldn't load save file...")
+        #except: logging.error("ExectAlerter failed at making a backup.")
+        except Exception as e: logging.exception(e)
      
     def __restoreBackup(self):
         import shutil
@@ -224,8 +251,12 @@ class ExecAlarm(EmpAlarm):
         else: logging.error("ExecAlerter tried to restore a non-existent backup.")
         
     def __removeBackup(self):
-        try: os.remove(self.__savedir+"alarms_backup.xml")
-        except: logging.warning("ExectAlerter failed at removing its backup file.")
+        try: 
+            dst = self.__savedir+"alarms_backup.xml"
+            if os.path.exists(dst): os.remove(dst)
+            else: logging.warning("First time loading ExecAlarm? Couldn't remove backup...")
+        #except: logging.warning("ExectAlerter failed at removing its backup file.")
+        except Exception as e: logging.exception(e)
             
     def __try_setup_path(self,path):
         if os.path.exists(path):

@@ -13,7 +13,7 @@ Description = This alarm executes a program when it gets an alert.
 Name = Execution Alarm
 Module = ExecAlarm
 Cmd = execman
-load = False
+#load = False
 
 
 [Defaults]

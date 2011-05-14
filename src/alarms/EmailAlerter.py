@@ -24,16 +24,13 @@ class EmailAlerter(EmpAlarm):
         """Sets up the alerter."""
         EmpAlarm.__init__(self, conf)
         
-    def handle_msg(self, msg):
-        """ """
-        pass
     
     def get_commands(self):
-        pass
+        return []
     
     
-    def alert(self, *args):
-        pass
+    def get_alerts(self):
+        return []
     
     
     def save(self):
