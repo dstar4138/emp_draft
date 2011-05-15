@@ -196,15 +196,17 @@ def main():
                             # be utilized in a script or a higher level interface. if you 
                             # want to call smtg through your program be sure you can 
                             # handle JSON 
-                            print(result) 
-                        else:
-                            print("Command sent.")
+                            if args.pretty: fancyprint(result)
+                            # No-pretty is the default, but its an argument just to specify 
+                            # if the command line is placed in scripts.
+                            else: print(result) 
+                        else: print("success")
             
             # now lets close the port to indicate that we are finished.
             daemon.close()
         except:
-            raise
-            #print("Error: Couldn't connect to the daemon. Is it running?")
+            if not args.nowait: raise
+            else: print("error") # scripts can check for this.
                 
 
 if __name__ == "__main__": main()

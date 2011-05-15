@@ -229,7 +229,7 @@ class EmpDaemon(RDaemon):
                     alist = self.aman.getAllPlugins()
                     logging.debug("got %d attachments",len(alist))
                     for attach in self.aman.getAllPlugins():
-                        logging.debug("getting commands from plug: %s", attach.plugin_object.module)
+                        logging.debug("getting commands from plug: %s", attach.module)
                         cmds = CommandList(attach.plugin_object.get_commands())
                         all[attach.name] = cmds.getHelpDict()
                 except Exception as e:logging.exception(e)
