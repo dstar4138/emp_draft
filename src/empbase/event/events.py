@@ -69,7 +69,9 @@ class Event():
 
     def detrigger(self):
         self.triggering.acquire()
-        if not self.triggered: return
+        if not self.triggered: 
+            self.triggering.release()
+            return
         detriggerEvent(self.ID)
         if self.group is not None:
             self.group.detriggerCallback()
@@ -91,6 +93,8 @@ class Event():
         """
         deregisterEvent( self )
 
+    def __hash__(self):
+        return id(self)
 
     def __eq__(self, other):
         if not isinstance(other, Event): return False

@@ -34,7 +34,7 @@ from threading import Thread
 
 from empbase.comm.interface import Interface
 from empbase.registration.registry import Registry
-from empbase.event.eventmanager import EventManager
+from empbase.event.eventmanager import EventManager, triggerEvent
 from empbase.attach.management import AttachmentManager
 from empbase.config.logger import setup_logging
 from empbase.comm.command import Command, CommandList
@@ -51,12 +51,14 @@ def notimplemented(*args):
 def parsesubs(substr):
     """ Parses the subscription strings."""
     tmp = substr.split(".")
-    if len(tmp) >= 2:
-        return tmp[0],tmp[1],tmp[1:]
+    if len(tmp) == 2:
+        return tmp[0],tmp[1],[]
+    elif len(tmp) > 2:
+        return tmp[0],tmp[1],tmp[2:]
     elif len(tmp) == 1:
         return tmp[0], None, []
     else: return substr, None, []
-         
+    
 
 class EmpDaemon(RDaemon):
     """ The Daemon for SMTG, all communication to this daemon goes through smtgd.py
@@ -199,17 +201,35 @@ class EmpDaemon(RDaemon):
         else: raise Exception("deactivate command needs a target name or id.")
         
         
-    def __cmd_subscribe(self, *args):
-        if len(args) != 2: 
-            raise Exception("Subscribe command takes two arguments.")
-        
-        name, sub, defaults = parsesubs(args)
-        
+    def __cmd_subscribe(self, *args): return notimplemented()
     def __cmd_subscriptions(self, *args): return notimplemented()
     def __cmd_unsubscribe(self, *args):   return notimplemented()
         
         
-    def __cmd_trigger(self, *args): return notimplemented()
+    def __cmd_trigger(self, *args):
+        if len(args) != 1:
+            raise Exception("Trigger command needs an event string or an event's id.")
+        plug,event,others = parsesubs(args[0])
+        if len(others)>0: raise Exception("Invalid event string or id.")
+        try:
+            if event is None: #could be either an id or just a plug name.
+                pid = self.registry.getAttachId(plug)
+                eids = self.registry.getPlugEventIds(pid)
+                if len(eids)==0:
+                    eid = self.registry.getEventId(plug)
+                    if eid is None: raise Exception()
+                    else: eids.append(eid)
+                for eid in eids: triggerEvent(eid)
+            else: #must be an event string
+                pid = self.registry.getAttachId(plug)
+                eid = self.registry.getPlugEventId(pid, event)
+                if eid is not None: triggerEvent(eid)
+                else: raise Exception("Could not find the given event to trigger!")
+            return "Triggered!"
+        except Exception as e: 
+            logging.exception(e)
+            raise e #explicit re-raise
+        
     def __cmd_cvar(self, *args):    return notimplemented()        
     def __cmd_events(self, *args):  return notimplemented()
     def __cmd_alerts(self, *args):  return notimplemented()
@@ -245,7 +265,19 @@ class EmpDaemon(RDaemon):
                     return cmds.getHelpDict()
                 else:
                     raise Exception("Invalid target")
-                    
+ 
+    def __validatesubs( self, args ):
+        """ Validate subscription arguments and returns """
+        if len(args) != 2: 
+            raise Exception("Subscribe command takes two arguments.")
+        
+        namea, suba, defaultsa = parsesubs(args[0])
+        nameb, subb, defaultsb = parsesubs(args[1])
+        
+        if len(defaultsa) > 0 or len(defaultsb) > 0:
+            raise Exception("One or both of your arguments are not valid subscription strings.")
+        
+        #TODO: return id of items described or references.
   
     def _run(self):
         """ 

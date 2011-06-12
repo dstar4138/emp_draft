@@ -81,6 +81,8 @@ class TimerPlug(SignalPlug):
         return self._commands
     
     def get_events(self):
+        #just to make sure everything is registered first.
+        for e in self._events: e.register() 
         return self._events
 
     def getport(self):
@@ -134,13 +136,14 @@ class TimerPlug(SignalPlug):
     def addtimer(self, seconds):
         """ Adds a timer, and starts the SingalPlugin if needed."""
         try:
-            t = MyTimer(seconds,self.sendSignal)
+            t = MyTimer(seconds, self.sendSignal)
             t.start()
             self._timers.append(t)
             self.activate() #starts the run thread if its not already running
             
             return "Started timer for "+str(seconds)+" seconds!"
-        except:
+        except Exception as e:
+            logging.exception(e)
             raise Exception("Couldn't add timer!")
             
     def removetimer(self, index):

@@ -58,7 +58,7 @@ Output arguments:
   -n, --nowait       Don't wait for a response from the daemon for the 
                       command sent.
   -p, --pretty       Attempt to format the raw JSON that comes out of EMP.
-  -r, --nopretty     Some commands will asked to be pretty, this forces a
+  -r, --nopretty     Some commands will asked to be pretty, this forces
                       them to be raw JSON. Use if utilizing in a script.
    
 Target commands:
@@ -135,7 +135,7 @@ def main():
                 plugs = checkMsg(daemon.recv())
             
                 #print the list all pretty like:
-                print("Attached targets and their temp IDs:")
+                print("Attached targets and their temp IDs:") #TODO: make option to make it nopretty?
                 print("   Plugs:")
                 for k in plugs.keys():
                     print("     %s" % plugs[k][1])
@@ -153,10 +153,12 @@ def main():
                 daemon.send(makeCommandMsg("help",myID, args=["all"]))
                 cmds = checkMsg(daemon.recv(), dict)
                 for target in cmds.keys():
-                    print("%s"%target)
+                    if args.pretty: print("%s"%target)
                     if len(cmds[target].keys()) > 0:
-                        print("Commands:")
-                        fancyprint(cmds[target])
+                        if args.pretty:
+                            print("Commands:")
+                            fancyprint(cmds[target])
+                        else: print(str(cmds[target]))
                     else: print("No Commands available!")
                     print()
                     
@@ -165,20 +167,24 @@ def main():
                 if args.tcmds:
                     daemon.send(makeCommandMsg("help",myID, args=args.target))
                     cmds = checkMsg(daemon.recv(), dict)
-                    print("%s Commands: "%args.target[0])
-                    fancyprint(cmds)
+                    if args.pretty: 
+                        print("%s Commands: "%args.target[0])
+                        fancyprint(cmds)
+                    else: print(str(cmds))
                 elif args.ask:
                     daemon.send(makeCommandMsg("help",myID, args=args.target))
                     cmds = checkMsg(daemon.recv(), dict)
                     cmdfound = False
                     for cmd in cmds.keys():
                         if args.ask[0] == cmd:
-                            print("  %s  -%s"%(cmd,cmds[cmd]))
+                            if args.pretty: print("  %s  -%s"%(cmd,cmds[cmd]))
+                            else: print("{'%s': '%s'}"%(cmd,cmds[cmd]))
                             cmdfound = True
                             break
                             
                     if not cmdfound:
-                        print("The target does not have that command.")
+                        if args.pretty: print("The target does not have that command.")
+                        else: print("ERROR: No command")
                 else:
                     if len(args.command) < 1:
                         print("Usage: ",__usage__)

@@ -24,21 +24,23 @@ UNKNOWN = "<UNKNOWNOMGS>"
 def triggerEvent(eid):
     """ Handles contacting the EventManager and running all the subscribers
     quickly so the Event doesn't see any slow-down.
-    """    
+    """
+    global _theEManager_
     if _theEManager_ is not None:
         Thread(target=_theEManager_.triggerEvent, args=[eid,]).start()
     else: # or eid == UNKNOWN
-        logging.debug("Event(%s) was triggered before EM was initialized." % eid)
+        logging.warning("Event(%s) was triggered before EM was initialized." % eid)
 
 
 def detriggerEvent(eid):    
     """ Handles contacting the EventManager and removing an event from the 
     queue of things to trigger, or list of currently triggered events.
     """    
+    global _theEManager_
     if _theEManager_ is not None:
         Thread(target=_theEManager_.detriggerEvent, args=[eid,]).start()
     else: # or eid == UNKNOWN
-        logging.debug("Event(%s) was triggered before EM was initialized." % eid)
+        logging.warning("Event(%s) was triggered before EM was initialized." % eid)
      
      
      
@@ -46,39 +48,43 @@ def registerEvent(event):
     """ Can be used for dynamic runtime creation of Events. Shouldn't throw the 
     loading into a new thread because we don't want accidental race conditions. 
     """
+    global _theEManager_
     if _theEManager_ is not None:
         _theEManager_.loadEvent(event)
     else:
-        logging.debug("Event tried to be registered before EM was initialized." )
+        logging.warning("Event tried to be registered before EM was initialized." )
      
 def deregisterEvent(event):
     """ Can be used for dynamic runtime destruction of Events. Shouldn't throw  
     the loading into a new thread because we don't want accidental race 
     conditions. 
     """
+    global _theEManager_
     if _theEManager_ is not None:
         _theEManager_.unloadEvent(event)
     else:
-        logging.debug("Event tried to be deregistered before EM was initialized." )
+        logging.warning("Event tried to be deregistered before EM was initialized." )
      
 def registerAlert(alert):
     """ Can be used for dynamic runtime creation of Alerts. Shouldn't throw the 
     loading into a new thread because we don't want accidental race conditions. 
     """
+    global _theEManager_
     if _theEManager_ is not None:
         _theEManager_.loadAlert(alert)
     else:
-        logging.debug("Alert tried to be registered before EM was initialized." )
+        logging.warning("Alert tried to be registered before EM was initialized." )
      
 def deregisterAlert(alert):
     """ Can be used for dynamic runtime destruction of Alerts. Shouldn't throw  
     the loading into a new thread because we don't want accidental race 
     conditions. 
     """
+    global _theEManager_
     if _theEManager_ is not None:
         _theEManager_.unloadAlert(alert)
     else:
-        logging.debug("Alert tried to be deregistered before EM was initialized." )
+        logging.warning("Alert tried to be deregistered before EM was initialized." )
      
 
         
@@ -115,6 +121,7 @@ class EventManager():
         eid = self.registry.loadEvent(event.name, event._getPID())
         event.ID = eid
         self.eventmap[eid] = event
+        logging.debug("saved event: %s, id=%s"%(event.name,eid))
     
     def loadEvents(self, eventlist):
         for event in eventlist:

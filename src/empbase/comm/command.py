@@ -20,12 +20,20 @@ class Command():
         help = Command( "help", 
                         trigger=helpscreen,
                         help="Displays a help screen for this Plug" )
+                        
+        Notice that there is also a help string. This is returned when 
+    an interface requests a help screen for this Command's Attachment. 
+    
+        Commands can also have descriptions, which can be though of as a 
+    more descriptive version of the "help" string. EMP will use it when 
+    an interface requests more information about a single command.
     """
-    def __init__(self, name, trigger=None, pargs=(), help=None):
+    def __init__(self, name, trigger=None, pargs=(), help=None, desc=None):
         self.name = name
         self.trigger = trigger
         self.pargs = pargs
         self.help = help
+        self.desc = desc
         
     def __eq__(self, other):
         """ The command can be compared to a string. It compares its 
@@ -52,6 +60,14 @@ class Command():
             return {self.name : self.help}
         else:
             return {self.name : ""}
+        
+    def asAdvMap(self):
+        """ Returns this command as a map of name to description string, or help
+        string if there is no description.
+        """
+        if self.desc is not None:
+            return {self.name : self.desc}
+        else: return self.asMap()
         
     def __str__(self):
         return str(self.asMap())
@@ -80,4 +96,9 @@ class CommandList():
             d.update(cmd.asMap())
         return d
     
+    def getAdvanceHelpDict(self):
+        d = {}
+        for cmd in self._list:
+            d.update(cmd.asAdvMap())
+        return d
     

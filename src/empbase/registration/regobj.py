@@ -116,29 +116,149 @@ class RegAlert():
         else: return False
         
         
+class SubscriptionType:
+    """ Each subscription has a type, these classify how the id's 
+    held in the subscription are connected and how to reference 
+    them. (ie aid,lid,eid,pid).
+    """
+    Unknown, EventAlert, EventAlarm, PlugAlert, PlugAlarm = range(5)
+        
+        
+        
+def parseAttribToSub( attrib ):        
+    """Parses the attributes into a subscription. It will throw an
+    Exception if this isn't possible.
+    """
+    #I know its gross but it has to be done.
+    sub = None
+    if "id" in attrib: sub = RegSubscription(attrib["id"])
+    else:return None
+    if "eid" in attrib:
+        if "lid" in attrib:
+            sub.setEventAlertSub(attrib["eid"], attrib["lid"])
+        elif "aid" in attrib:
+            sub.setEventAlarmSub(attrib["eid"], attrib["aid"])
+        else: return None
+    elif "pid" in attrib:
+        if "lid" in attrib:
+            sub.setPlugAlertSub(attrib["pid"], attrib["lid"])
+        elif "aid" in attrib:
+            sub.setPlugAlarmSub(attrib["pid"], attrib["aid"])
+        else: return None
+    else: return None
+    return sub
+
 class RegSubscription():
-    """ """        
-    def __init__(self, id, eid, lid):
+    """ A subscription can be a connection between event and alert, 
+    but also between alarms and events, alarms and plugs, and also 
+    plug and alert. 
+            (eid,lid), (eid,aid), (pid,lid), (pid,aid)
+    """
+            
+    def __init__(self, id):
         self.ID = id
-        self.eid = eid
-        self.lid = lid
+        self.subs = (None,None)
+        self.type = SubscriptionType.Unknown
+        self.eparent = None
+        self.lparent = None
+     
+    def isValid(self):
+        """Check if the subscription has a valid linking."""
+        return self.subs[0] is not None and  \
+               self.subs[1] is not None and  \
+               self.type is not SubscriptionType.Unknown
             
     def getAttrib(self):
-        return {"eid":str(self.eid),
-                "lid":str(self.lid),
-                "id":str(self.ID)}
+        """Returns all of the attributes for this subscription as a 
+        map for easy parsing an pushing into a XML node. (Done in 
+        the registry.) 
+        If the current subscription is invalid then an Exception will
+        be raised.
+        """
+        lst = {"id":str(self.ID)}
+        if not self.isValid(): 
+            raise TypeError("The Subscription isn't valid.")
+        
+        if self.type==SubscriptionType.EventAlert:
+            lst["eid"], lst["lid"] = self.subs
+        elif self.type==SubscriptionType.EventAlarm:
+            lst["eid"], lst["aid"] = self.subs
+        elif self.type==SubscriptionType.PlugAlert:
+            lst["pid"], lst["lid"] = self.subs
+        elif self.type==SubscriptionType.PlugAlarm:
+            lst["pid"], lst["aid"] = self.subs
+            
+        if self.eparent is not None: 
+            lst["eparent"] = self.eparent
+        if self.lparent is not None:
+            lst["lparent"] = self.lparent
+            
+        return lst
     
-    def asTuple(self):
-        return (self.lid, self.eid)    
+    def asTuple(self): 
+        """Returns the subscription as a tuple with two IDs."""
+        return self.subs 
+    
+    def setEventAlertSub(self, eid, lid):
+        """Set the subscription between an event and an alert. This
+        means that whenever the event fires the alert will trigger.
+        """
+        self.__set(SubscriptionType.EventAlert, eid, lid)
+        
+    def setEventAlarmSub(self, eid, aid):
+        """Set the subscription between an event and an alarm. This
+        means that whenever the event fires all of the alerts for the
+        given alarm will trigger.
+        """
+        self.__set(SubscriptionType.EventAlarm, eid, aid)
+        
+    def setPlugAlertSub(self, pid, lid):
+        """ Set the subscription between a plug and an alert. This
+        means that whenever any event from the given plug fires, the
+        alert will trigger. 
+        """
+        self.__set(SubscriptionType.PlugAlert, pid, lid)
+        
+    def setPlugAlarmSub(self, pid, aid):
+        """ Set the subscription between a plug and an alarm. This
+        means that whenever any event from the given plug fires, all
+        of the alerts for the given alarm will trigger. 
+        """
+        self.__set(SubscriptionType.PlugAlarm, pid, aid)
+        
+        
+    def contains(self, id):
+        """ Checks if this subscription is for the given id. """
+        return id in self.subs
+        
+    def hasParent(self, id):
+        """ If the ID is a parent of this subscription. (ie if the
+        id is of an alarm and its alert is part of this subscription).
+        """
+        return self.eparent == id or \
+               self.lparent == id
+        
+    def __set(self, type, first, second):
+        """Set the internals of the subscription. It makes the list of 
+        setters make a little more sense.
+        """
+        self.type = type
+        self.subs = (first, second)    
         
     def __eq__(self, other):
+        """ Check if this subscription is equal to something else. When 
+        'other' is a string it compares it with the subscriptions unique ID,
+        if its a tuple it compares it to the ids of the subscription links.
+        """
+        # Used to compare two tuples as groups without order.
+        def swapcmp(x,y): return x==y or x==(y[1],y[0])
+        
         if type(other) is str:
             return self.ID == other
         elif type(other) is tuple:
-            return other == (self.lid, self.eid)
+            return swapcmp(other, self.subs)
         elif type(other) is RegSubscription:
             return self.ID == other.ID and \
-                   self.lid == other.lid and \
-                   self.eid == other.eid
+                   swapcmp(self.subs, other.subs)
         else: return False
         

@@ -210,7 +210,7 @@ class ExecAlarm(EmpAlarm):
         for alarm in self.__root.getchildren():
             if "gid" in alarm.attrib and  \
                groupid == alarm.attrib["gid"]:
-               return alarm
+                return alarm
         return None
     
     def __load(self):

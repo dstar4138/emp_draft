@@ -19,7 +19,8 @@ import logging
 from string import ascii_lowercase, digits
 import xml.etree.ElementTree as ET
 from empbase.registration.regobj import RegAttach, RegEvent, RegAlert, \
-                                        RegSubscription, PLUG, ALARM, INTERFACE
+                                        RegSubscription, PLUG, ALARM, INTERFACE,  \
+                                        parseAttribToSub, SubscriptionType
 """
 the registry xml structure is like this, it may change
 when we want to house more cache related items for the attachments.
@@ -42,7 +43,10 @@ is fairly simple:
         ...
     </alerts>
     <subscriptions>
-        <sub id='' eid='' lid=''/>
+        <sub id='' eid='' lid='' eparent='' lparent=''/>   <--event=alert
+        <sub id='' eid='' aid='' eparent=''/>              <--event=all alarm's alerts
+        <sub id='' pid='' lid='' lparent=''/>              <--any plug event = alert
+        <sub id='' pid='' aid=''/>            <--any plug event = all alarm's alerts
         ...
     </subscriptions>
 </registry>
@@ -121,10 +125,8 @@ class Registry():
             
             subscriptions = root.find("subscriptions")
             for node in subscriptions.getchildren():
-                subscription = RegSubscription( node.attrib["id"],
-                                         node.attrib["eid"],
-                                         node.attrib["lid"],
-                                         node.attrib["name"] )
+                subscription = parseAttribToSub( node.attrib )
+                if subscription is None: continue #couldn't parse
                 self._subscriptions[subscription.ID] = subscription
             
         except IOError: pass # no such file? who cares...
@@ -201,47 +203,114 @@ class Registry():
                 return False
             return True
 
-    
-    def subscribe(self, lid, eid): 
-        """ Make a given Alert id listen to a given event id. """
-        if eid in self._events and \
-           lid in self._alerts:
+    def __validSubscription(self, alertAlarm, eventPlug):
+        #This looks gross but its faster than calling the parent
+        # calls on everything.
+        alid, epid = None, None    #used for ids
+        alarm, plug = False, False #used for typing
+        type = SubscriptionType.Unknown
+        for alert in self._alerts.values():
+            if alertAlarm == alert.ID:
+                alid = alertAlarm
+                break
+            elif alertAlarm == alert.aid:
+                alid = alertAlarm
+                alarm = True
+                break
+            elif eventPlug == alert.ID:
+                alid = eventPlug
+                break
+            elif eventPlug == alert.aid:
+                alid = eventPlug
+                alarm = True
+                break
+        for event in self._events.values():
+            if alertAlarm == event.ID:
+                epid = alertAlarm
+                break
+            elif alertAlarm == event.pid:
+                epid = alertAlarm
+                plug = True
+                break
+            elif eventPlug == event.ID:
+                epid = eventPlug
+                break
+            elif eventPlug == event.pid:
+                epid = eventPlug
+                plug = True
+                break
+        if alarm and plug:
+            type = SubscriptionType.PlugAlarm
+        elif alarm and not plug:
+            type = SubscriptionType.EventAlarm
+        elif not alarm and plug:
+            type = SubscriptionType.PlugAlert
+        elif not alarm and not plug:
+            type = SubscriptionType.EventAlert
+        #return all of this info we found.
+        return type, alid, epid
             
-            id = self.alreadySubscribed(lid, eid)
-            if id is None: id = self.__getNewSubscriptionId()
+
+    def subscribe(self, alertAlarmID, eventPlugID): 
+        """ Make a given Alert/alarm id listen to a given event/plug id. This is 
+        slow and should only be done if we have no idea what types of ids they are,
+        otherwise lets use a specific subscribe method below.
+        """
+        type,alid,epid = self.__validSubscription(alertAlarmID, eventPlugID)
+        if type is not SubscriptionType.Unknown:
+            sub = RegSubscription(self.__getNewSubscriptionId())
+
+            if type is SubscriptionType.PlugAlarm:
+                sub.setPlugAlarmSub(epid, alid)
+            elif type is SubscriptionType.EventAlarm:
+                sub.setEventAlarmSub(epid, alid)
+                sub.eparent = self._getEventParent(epid)
+            elif type is SubscriptionType.PlugAlert:
+                sub.setPlugAlertSub(epid, alid)
+                sub.lparent = self._getAlertParent(alid)
+            elif type is SubscriptionType.EventAlert:
+                sub.setEventAlertSub(epid, alid)
+                sub.eparent = self._getEventParent(epid)
+                sub.lparent = self._getAlertParent(alid)
             
-            self._subscriptions[id] = RegSubscription(id,eid,lid)
+            self._subscriptions[sub.ID] = sub 
             return True
-        
         else: return False    
 
-    def unsubscribe(self, lid, eid): 
+    def subscribeEventAlert(self, eid, lid): pass #TODO: write subscription for e-l
+    def subscribeEventAlarm(self, eid, aid): pass #TODO: write subscription for e-a
+    def subscribePlugAlert(self, pid, lid): pass  #TODO: write subscription for p-l
+    def subscribePlugAlarm(self, pid, aid): pass  #TODO: write subscription for p-a
+
+    def unsubscribe(self, first, second): 
         """ Remove a specified event id from a given alert id. """
-        if eid in self._events and \
-           lid in self._alerts:
-            for sub in self._subscriptions.values():
-                if sub.lid == lid and sub.eid == eid:
-                    self._subscriptions.pop(sub.ID)
-                    return True
+        for sub in self._subscriptions.values():
+            if sub == (first, second):
+                self._subscriptions.pop(sub.ID)
+                return True
+            elif sub.contains(first) and sub.hasParent( second ):
+                self._subscriptions.pop(sub.ID)
+                return True
+            
         return False
     
-    def subscribedTo(self, eid): 
-        """ Returns a list of all the alert ids that are subscribed to the 
-        given event id.
+    def subscribedTo(self, eid): #TODO: needs to check parents
+        """ Returns a list of all the alert/alarm ids that are subscribed to 
+        the given event id.
         """
         lst = []
         for sub in self._subscriptions.values():
             if sub.eid == eid: lst.append(sub.lid)
         return lst
     
-    def subscriptions(self, lid): 
+    def subscriptions(self, lid): #TODO: needs to check parents
         """ Gets all the event IDs that an alert is subscribed to."""
         subs = []
         for sub in self._subscriptions.values():
             if sub.lid == lid: subs.append(sub.eid)
         return subs
         
-    def alreadySubscribed(self, lid, eid):
+    def alreadySubscribed(self, lid, eid): #TODO: needs to check for parents
         """ Checks if there is already a subscription between an event and an 
         alert. If there is it will return its subscription id, otherwise None.
         """
@@ -263,7 +332,6 @@ class Registry():
         """ Base registration method, returns the registry ID, """
         newid = self.__genNewAttachId()
         if cmd is not None or module is not None:
-            #check if the 
             for id in self._attachments.keys():
                 if module == self._attachments[id].module:
                     newid = id
@@ -320,6 +388,19 @@ class Registry():
         """ Returns the daemon's routing id. """
         return self._did
     
+    def getPlugEventIds(self, pid):
+        """Get plug's event's ids that are registered."""
+        lst = []
+        for event in self._events.values():
+            if event.pid == pid: lst.append(event.ID)
+        return lst
+    
+    def getPlugEventId(self, pid, ename):
+        """Get the ID of an event given its plug's id and its command name."""
+        for event in self._events.values():
+            if event.name == ename and event.pid == pid: 
+                return event.ID
+        return None
 
     def getAttachId(self, cmd):
         """ Quickly gets the ID for a command name. """
@@ -354,6 +435,13 @@ class Registry():
             return True
         else:
             return False
+
+
+    def getEventId(self, name):
+        for event in self._events.values():
+            if name == event.name or name == event.ID:
+                return event.ID
+        return None
 
 
     def loadEvents(self, eventlist):
