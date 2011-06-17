@@ -209,15 +209,19 @@ class Registry():
         alid, epid = None, None    #used for ids
         alarm, plug = False, False #used for typing
         type = SubscriptionType.Unknown
+        if alertAlarm is None or eventPlug is None:
+            print("--------------------------------One was none")
+            return type, None, None
+        logging.debug("-----SUBSCRIBING: ")
         for alert in self._alerts.values():
-            if alertAlarm == alert.ID:
+            if alertAlarm == alert:
                 alid = alertAlarm
                 break
             elif alertAlarm == alert.aid:
                 alid = alertAlarm
                 alarm = True
                 break
-            elif eventPlug == alert.ID:
+            elif eventPlug == alert:
                 alid = eventPlug
                 break
             elif eventPlug == alert.aid:
@@ -225,21 +229,23 @@ class Registry():
                 alarm = True
                 break
         for event in self._events.values():
-            if alertAlarm == event.ID:
+            if alertAlarm == event:
                 epid = alertAlarm
                 break
             elif alertAlarm == event.pid:
                 epid = alertAlarm
                 plug = True
                 break
-            elif eventPlug == event.ID:
+            elif eventPlug == event:
                 epid = eventPlug
                 break
             elif eventPlug == event.pid:
                 epid = eventPlug
                 plug = True
                 break
-        if alarm and plug:
+        if epid is None or alid is None:
+            type = SubscriptionType.Unknown
+        elif alarm and plug:
             type = SubscriptionType.PlugAlarm
         elif alarm and not plug:
             type = SubscriptionType.EventAlarm
@@ -256,31 +262,53 @@ class Registry():
         slow and should only be done if we have no idea what types of ids they are,
         otherwise lets use a specific subscribe method below.
         """
-        type,alid,epid = self.__validSubscription(alertAlarmID, eventPlugID)
-        if type is not SubscriptionType.Unknown:
-            sub = RegSubscription(self.__getNewSubscriptionId())
-
-            if type is SubscriptionType.PlugAlarm:
-                sub.setPlugAlarmSub(epid, alid)
-            elif type is SubscriptionType.EventAlarm:
-                sub.setEventAlarmSub(epid, alid)
-                sub.eparent = self._getEventParent(epid)
-            elif type is SubscriptionType.PlugAlert:
-                sub.setPlugAlertSub(epid, alid)
-                sub.lparent = self._getAlertParent(alid)
-            elif type is SubscriptionType.EventAlert:
-                sub.setEventAlertSub(epid, alid)
-                sub.eparent = self._getEventParent(epid)
-                sub.lparent = self._getAlertParent(alid)
-            
-            self._subscriptions[sub.ID] = sub 
-            return True
-        else: return False    
+        try:
+            type,alid,epid = self.__validSubscription(alertAlarmID, eventPlugID)
+            if type is not SubscriptionType.Unknown:
+                sub = RegSubscription(self.__getNewSubscriptionId())
+    
+                if type is SubscriptionType.PlugAlarm:
+                    sub.setPlugAlarmSub(epid, alid)
+                elif type is SubscriptionType.EventAlarm:
+                    sub.setEventAlarmSub(epid, alid)
+                    sub.eparent = self.getEventParent(epid)
+                elif type is SubscriptionType.PlugAlert:
+                    sub.setPlugAlertSub(epid, alid)
+                    sub.lparent = self.getAlertParent(alid)
+                elif type is SubscriptionType.EventAlert:
+                    sub.setEventAlertSub(epid, alid)
+                    sub.eparent = self.getEventParent(epid)
+                    sub.lparent = self.getAlertParent(alid)
+                
+                self._subscriptions[sub.ID] = sub 
+                return True
+            else: return False    
+        except Exception as e:
+            logging.exception(e)
+            raise e
 
     def subscribeEventAlert(self, eid, lid): pass #TODO: write subscription for e-l
     def subscribeEventAlarm(self, eid, aid): pass #TODO: write subscription for e-a
     def subscribePlugAlert(self, pid, lid): pass  #TODO: write subscription for p-l
     def subscribePlugAlarm(self, pid, aid): pass  #TODO: write subscription for p-a
+
+    def getEventParent(self, eid):
+        event = self._events.get(self.getEventId(eid), None)
+        if event is None: return None
+        return event.pid
+    
+    def getAlertParent(self, lid):
+        alert = self._alerts.get(self.getAlertId(lid), None)
+        if alert is None: return None
+        return alert.aid
+
+    def getAlarmsAlerts(self, aid):
+        lst = []
+        for alert in self._alerts.values():
+            if alert.aid == aid: lst.append( alert.ID )
+        return lst
+                
+
 
     def unsubscribe(self, first, second): 
         """ Remove a specified event id from a given alert id. """
@@ -295,13 +323,26 @@ class Registry():
         return False
     
     def subscribedTo(self, eid): #TODO: needs to check parents
-        """ Returns a list of all the alert/alarm ids that are subscribed to 
+        """ Returns a list of all the alert ids that are subscribed to 
         the given event id.
         """
-        lst = []
+        lst = {}
+        parentid = self.getEventParent( eid )
         for sub in self._subscriptions.values():
-            if sub.eid == eid: lst.append(sub.lid)
-        return lst
+            id = sub.contains(eid)
+            if id is not None: lst[ id ] = 1
+            else:
+                id = sub.contains(parentid)
+                if id is not None: lst[ id ] = 1
+        #we have all of the subscriptions, now we
+        #need to make sure they are JUST the alerts.
+        master = {}
+        for id in lst.keys():
+            if id in self._attachments:
+                for lid in self.getAlarmsAlerts(id):
+                    master[lid] = 1
+            else:master[id]=1
+        return master.keys()
     
     def subscriptions(self, lid): #TODO: needs to check parents
         """ Gets all the event IDs that an alert is subscribed to."""
@@ -439,7 +480,7 @@ class Registry():
 
     def getEventId(self, name):
         for event in self._events.values():
-            if name == event.name or name == event.ID:
+            if name == event:
                 return event.ID
         return None
 
@@ -483,7 +524,12 @@ class Registry():
         for event in self._events.values():
             if event == (name, aid): return event.ID
         return None
-            
+    
+    def getAlertId(self, name):
+        for alert in self._alerts.values():
+            if name == alert:
+                return alert.ID
+        return None        
     
     def loadAlerts(self, alertlist):
         for alert in alertlist:

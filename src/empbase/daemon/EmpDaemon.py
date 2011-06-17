@@ -201,7 +201,70 @@ class EmpDaemon(RDaemon):
         else: raise Exception("deactivate command needs a target name or id.")
         
         
-    def __cmd_subscribe(self, *args): return notimplemented()
+    def __cmd_subscribe(self, *args): #TODO: This is disgusting and looks like a hack. Needs to be cleaner parsing.
+        """ Validate subscription arguments and returns """
+        if len(args) != 2: 
+            raise Exception("Subscribe command takes two arguments.")
+        
+        namea, suba, defaultsa = parsesubs(args[0])
+        nameb, subb, defaultsb = parsesubs(args[1])
+        logging.debug("-----SUBSCRIPION-VAL1 = (%s,%s,%s)"%(namea,suba,str(defaultsa)))
+        logging.debug("-----SUBSCRIPION-VAL2 = (%s,%s,%s)"%(nameb,subb,str(defaultsb)))
+        if len(defaultsa) > 0 or len(defaultsb) > 0:
+            raise Exception("One or both of your arguments are not valid subscription strings.")
+        
+        #Find out what our first argument is:
+        if suba is None and subb is None:
+            ## we can pass our strings directly to subscribe, it'll figure it out.
+            return self.registry.subscribe(namea, nameb)
+        
+        elif suba is not None and subb is None:
+            ## We need to find out what attachment it is.
+            id = self.registry.getAttachId( namea )
+            if id is None: return False
+            lid = self.registry.isAlertLoaded(suba, id)
+            if lid is None:
+                eid = self.registry.isEventLoaded(suba, id)
+                if eid is None: return False
+                id = eid
+            else: id = lid
+            return self.registry.subscribe(id, nameb)
+        
+        elif suba is None and subb is not None:
+            ## We need to find out what attachment it is.
+            id = self.registry.getAttachId( nameb )
+            if id is None: return False
+            lid = self.registry.isAlertLoaded(subb, id)
+            if lid is None:
+                eid = self.registry.isEventLoaded(subb, id)
+                if eid is None: return False
+                id = eid
+            else: id = lid
+            return self.registry.subscribe(id, namea)
+        
+        else:
+            
+            ## We need to find out what attachment it is.
+            first = self.registry.getAttachId( namea )
+            if first is None: return False
+            lid = self.registry.isAlertLoaded(suba, first)
+            if lid is None:
+                eid = self.registry.isEventLoaded(suba, first)
+                if eid is None: return False
+                first = eid
+            else: first = lid
+            second = self.registry.getAttachId( nameb )
+            if second is None: return False
+            lid = self.registry.isAlertLoaded(subb, second)
+            if lid is None:
+                eid = self.registry.isEventLoaded(subb, second)
+                if eid is None: return False
+                second = eid
+            else: second = lid
+            logging.debug("TRYING TO SUBSCRIBE %s=%s"%(first, second))
+            return self.registry.subscribe(first, second)
+        
+         
     def __cmd_subscriptions(self, *args): return notimplemented()
     def __cmd_unsubscribe(self, *args):   return notimplemented()
         
@@ -265,19 +328,7 @@ class EmpDaemon(RDaemon):
                     return cmds.getHelpDict()
                 else:
                     raise Exception("Invalid target")
- 
-    def __validatesubs( self, args ):
-        """ Validate subscription arguments and returns """
-        if len(args) != 2: 
-            raise Exception("Subscribe command takes two arguments.")
-        
-        namea, suba, defaultsa = parsesubs(args[0])
-        nameb, subb, defaultsb = parsesubs(args[1])
-        
-        if len(defaultsa) > 0 or len(defaultsb) > 0:
-            raise Exception("One or both of your arguments are not valid subscription strings.")
-        
-        #TODO: return id of items described or references.
+
   
     def _run(self):
         """ 

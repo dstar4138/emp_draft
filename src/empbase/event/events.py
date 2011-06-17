@@ -20,7 +20,7 @@ from empbase.event.eventmanager import triggerEvent, detriggerEvent, \
 
 #This is the id of an unknown event.
 UNKNOWN = "<UNKNOWNOMG>"
-DEFAULT_HALFLIFE = 1 #second
+DEFAULT_HALFLIFE = 0 # in seconds, 
 
 class Event():
     """ This is the base type of event that can happen within EMP,

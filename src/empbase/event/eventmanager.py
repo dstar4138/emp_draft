@@ -19,7 +19,7 @@ import logging
 from threading import Thread
 from empbase.event.eventhistory import EventHistory
 
-UNKNOWN = "<UNKNOWNOMGS>"
+UNKNOWN = "<UNKNOWNOMGS>"#FIXME: We dont need this.
 
 def triggerEvent(eid):
     """ Handles contacting the EventManager and running all the subscribers
@@ -109,8 +109,9 @@ class EventManager():
         
         self.eventmap = {} #eid -> ref
         self.alertmap = {} #lid -> ref
+        self.halflifes= {} #eid -> int
         if self.trigger():
-            #Thread(target=self.watchList).start() #FIXME: un-comment when ready!
+            Thread(target=self.watchList).start()
             Thread(target=self.watchQueue).start()
     
     def getInstance(self):
@@ -132,7 +133,7 @@ class EventManager():
     def unloadEvent(self, event):
         if self.registry.unloadEvent(event.ID):
             if self.eventmap.pop(event.ID):
-                event.ID = UNKNOWN
+                event.ID = UNKNOWN #FIXME: Just use None
                 return True
         return False
         
@@ -151,7 +152,7 @@ class EventManager():
     def unloadAlert(self, alert):
         if self.registry.unloadAlert(alert.ID):
             if self.alertmap.pop(alert.ID):
-                alert.ID = UNKNOWN
+                alert.ID = UNKNOWN #FIXME: Just use None
                 return True
         return False
     
@@ -161,9 +162,14 @@ class EventManager():
         logging.debug("Event(%s) triggered!"%eid)
         
     def detriggerEvent(self, eid):
-        if not self.eventqueue.pop(eid):
-            try: self.triggered.remove(eid)
-            except: pass
+        """To de-trigger we need to remove it from both the list
+        of events that have yet to be processed and also the ones
+        that have been added to the already triggered list.
+        """
+        try:self.eventmap.pop(eid, None)
+        except: pass
+        try: self.triggered.remove(eid)
+        except: pass
     
     
 #### THE FOLLOWING NEEDS TO BE REALLY FRIGGIN FAST! ####    
@@ -174,13 +180,15 @@ class EventManager():
         logging.debug("running subscribers") #XXX: remove me
         for lid in lids:
             try: Thread(target=self.alertmap[lid].run, args=(eventobj,)).start()
-            except Exception as e: logging.error(e)
+            except Exception as e: 
+                logging.exception(e)
+                logging.debug("Alerts: %s"%str(self.alertmap))
         logging.debug("running subscribers dead") #XXX: remove me
     
     
     def watchQueue(self):
         """ Watches the queue and if there is an event in there, runs all of 
-        the subscribers as quickly as possible. If there is a 
+        the subscribers as quickly as possible.
         """
         logging.debug("EventQueue watcher thread started")
         while self.trigger():
@@ -192,7 +200,8 @@ class EventManager():
                        args=(self.eventmap[id],
                              self.registry.subscribedTo(id),)).start()
                 if self.eventmap[id].halflife > 0: 
-                    self.triggered.append(self.eventmap[id]) #TODO: pull out the counter?
+                    self.triggered.append(self.eventmap[id])
+                    self.halflifes[id] = self.eventmap[id].halflife 
                 
             except queue.Empty: pass
             except Exception as e: logging.exception(e)
@@ -207,11 +216,14 @@ class EventManager():
         """ Watches the list and removes halflifes from all the events! """
         logging.debug("Event list watcher thread started")
         while self.trigger():
-            #TODO: every loop through remove a counter 
-        
-            
-            try: time.sleep(1) #FIXME: sleep time adjusts for how long it took to get around loop.
-            except: pass
+            t = time.time()
+            for k,v in self.halflifes.items():
+                if v-1 > 0: self.halflifes[k] = v-1
+                else: 
+                    self.halflifes.pop(k)
+                    detriggerEvent( k )
+            try: time.sleep(1.0-(time.time()-t))
+            except:pass #took too long, TODO: what should we do in this case?
         logging.debug("Event list watcher thread dead")
     
     

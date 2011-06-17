@@ -12,6 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and 
 limitations under the License. 
 """
+import logging
 import empbase.event.events as empevents
 import empbase.event.alerts as empalerts
 import empbase.attach.attachments as attach
@@ -42,7 +43,7 @@ class RegAttach():
     def __eq__(self, other):
         """ Compares IDs of two RegItems or of a id string. """
         if type(other) is str:
-            return other == self.id
+            return other == self.id or other == self.cmd
         elif type(other) is RegAttach:
             return other.id == self.id
         elif type(other) is attach.EmpAttachment:
@@ -71,7 +72,7 @@ class RegEvent():
     
     def __eq__(self, other):
         if type(other) is str:
-            return self.ID == other
+            return self.ID == other or self.name == other
         elif type(other) is tuple:
             return other == (self.name, self.pid)
         elif type(other) is RegEvent:
@@ -102,7 +103,7 @@ class RegAlert():
         
     def __eq__(self, other):
         if type(other) is str:
-            return self.ID == other
+            return self.ID == other or self.name == other
         elif type(other) is tuple:
             return other == (self.name, self.aid)
         elif type(other) is RegAlert:
@@ -146,6 +147,9 @@ def parseAttribToSub( attrib ):
             sub.setPlugAlarmSub(attrib["pid"], attrib["aid"])
         else: return None
     else: return None
+    
+    sub.eparent = attrib.get("eparent", None)
+    sub.lparent = attrib.get("lparent", None)
     return sub
 
 class RegSubscription():
@@ -164,6 +168,7 @@ class RegSubscription():
      
     def isValid(self):
         """Check if the subscription has a valid linking."""
+        logging.debug("Validity of Subscription: sub(%s, %s)=%d"%(self.subs[0],self.subs[1],self.type))
         return self.subs[0] is not None and  \
                self.subs[1] is not None and  \
                self.type is not SubscriptionType.Unknown
@@ -229,7 +234,9 @@ class RegSubscription():
         
     def contains(self, id):
         """ Checks if this subscription is for the given id. """
-        return id in self.subs
+        if id == self.subs[0]: return self.subs[1]
+        elif id == self.subs[1]: return self.subs[0]
+        else: return False
         
     def hasParent(self, id):
         """ If the ID is a parent of this subscription. (ie if the

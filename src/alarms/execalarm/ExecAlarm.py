@@ -199,6 +199,7 @@ class ExecAlarm(EmpAlarm):
                                                 self.__XMLFor(g)))
         # Make sure all the alerts are valid
         self.__alerts = [a for a in self.__alerts if a.isvalid]
+        for a in self.__alerts: a.register()
         # after setting up we dont need the xml anymore.
         self.__root = None
             
