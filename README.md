@@ -1,6 +1,12 @@
 EMP: Extendable Monitoring Platform
 ==========================================
 
+WARNING:
+---------
+THIS VERSION IS NO LONGER IN DEVELOPMENT AND IS HERE FOR POSTERITY OF FUTURE VERSIONS. 
+Please go to the newer EMP project.
+
+
 Short Description:
 ------------------
 
